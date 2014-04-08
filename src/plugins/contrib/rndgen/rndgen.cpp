@@ -12,7 +12,15 @@
 
 #define SCI_SETUNDOCOLLECTION 2012
 
-#if defined(__GNUC__) && defined(__GXX_EXPERIMENTAL_CXX0X__)
+#if __cplusplus >= 201103L
+    #include <tr1/random>
+    inline void ini_random() {}
+    inline unsigned int random()
+    {
+        static std::tr1::mersenne_twister<unsigned int, 32, 624, 397, 31, 0x9908b0df, 11, 7, 0x9d2c5680, 15, 0xefc60000, 18> randgen(time(0));
+        return randgen();
+    }
+#elif defined(__GNUC__) && defined(__GXX_EXPERIMENTAL_CXX0X__)
 	#include <random>
     inline void ini_random() { };
 	inline unsigned int random()
@@ -21,6 +29,7 @@
 		return randgen();
 	};
 #else
+	#include <cstdlib>
 	inline void ini_random() { srand(time(0)); };
 	inline int random() { return rand(); };
 #endif
