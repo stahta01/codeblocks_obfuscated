@@ -585,11 +585,11 @@ void Tokenizer::ReadParentheses(wxString& str)
                         p = realBuffer;  // adjust the p, as it was an empty buffer
                     }
                     // append the string to str (not write the string to the buffer)
-                    str.Append((const wxChar*)m_Buffer + startIndex, writeLen);
+                    str.Append(m_Buffer.wx_str() + startIndex, writeLen);
                 }
                 else
                 {   // the buffer can hold the string, so copy it to the buffer
-                    memcpy(p, (const wxChar*)m_Buffer + startIndex, writeLen * sizeof(wxChar));
+                    memcpy(p, m_Buffer.wx_str() + startIndex, writeLen * sizeof(wxChar));
                     p += writeLen;
                 }
 
@@ -1255,7 +1255,7 @@ void Tokenizer::ReplaceMacro(wxString& str)
         while (SkipWhiteSpace() || SkipComment())
             ;
         DoGetToken(); // eat (...)
-        wxString target = (const wxChar*)it->second + 1;
+        wxString target = it->second.wx_str() + 1;
         if (target.IsEmpty())
         {
             while (SkipWhiteSpace() || SkipComment())
@@ -1270,7 +1270,7 @@ void Tokenizer::ReplaceMacro(wxString& str)
         // sample rule:  "BEGIN_EVENT_TABLE" -> "-END_EVENT_TABLE"
         // we should skip to END_EVENT_TABLE, so the contents between BEGIN_EVENT_TABLE and
         // END_EVENT_TABLE is skipped, also the "()" after END_EVENT_TABLE is skipped.
-        wxString end((const wxChar*)it->second + 1); // strip the '-'
+        wxString end(it->second.wx_str() + 1); // strip the '-'
         if (end.IsEmpty())
             return;
 
@@ -1764,12 +1764,13 @@ bool Tokenizer::ReplaceBufferText(const wxString& target, bool updatePeekToken)
     }
 
     // Replacement backward
-    wxChar* p = const_cast<wxChar*>((const wxChar*)m_Buffer) + m_TokenIndex - bufferLen;
+    wxChar* p = const_cast<wxChar*>(m_Buffer.wx_str()) + m_TokenIndex - bufferLen;
     TRACE(_T("ReplaceBufferText() : <FROM>%s<TO>%s"), wxString(p, bufferLen).wx_str(), buffer.wx_str());
     // NOTE (ollydbg#1#): This function should be changed to a native wx function if wxString (wxWidgets
     // library) is built with UTF8 encoding for wxString. Luckily, both wx2.8.12 and wx 3.0 use the fixed length
     // (wchar_t) for the wxString encoding unit, so memcpy is safe here.
-    memcpy(p, (const wxChar*)target, bufferLen * sizeof(wxChar));
+    // FIXME: This is not safe at all, especially in wx3.0!
+    memcpy(p, target.wx_str(), bufferLen * sizeof(wxChar));
 
     // Fix token index
     m_TokenIndex -= bufferLen;
