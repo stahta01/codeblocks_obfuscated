@@ -520,10 +520,10 @@ struct Item
 
     int CompareDirectory(Item const &item) const
     {
-        int c = directory.CompareTo(item.directory);
+        int c = directory.CompareTo(item.directory.wx_str());
         if (c)
             return c;
-            c = filename.CompareTo(item.filename);
+            c = filename.CompareTo(item.filename.wx_str());
 
         if (c)
             return c;
@@ -532,7 +532,7 @@ struct Item
 
     int CompareFile(Item const &item) const
     {
-        int c = filename.CompareTo(item.filename);
+        int c = filename.CompareTo(item.filename.wx_str());
         if (c)
             return c;
         return Compare(line, item.line);
@@ -619,7 +619,7 @@ inline int wxCALLBACK SortTextAscending(wxIntPtr item1, wxIntPtr item2, wxIntPtr
     if (c)
         return c;
 
-    return i1.text.CompareTo(i2.text);
+    return i1.text.CompareTo(i2.text.wx_str());
 }
 
 inline int wxCALLBACK SortTextDescending(wxIntPtr item1, wxIntPtr item2, wxIntPtr /*data*/)
@@ -634,7 +634,7 @@ inline int wxCALLBACK SortTextDescending(wxIntPtr item1, wxIntPtr item2, wxIntPt
     if (c)
         return c;
 
-    return i2.text.CompareTo(i1.text);
+    return i2.text.CompareTo(i1.text.wx_str());
 }
 
 template <typename Item>
