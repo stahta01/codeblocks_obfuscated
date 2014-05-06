@@ -51,6 +51,7 @@ bool PersonalDictionary::LoadPersonalDictionary()
     if (!(strWord.IsEmpty()) && (strWord != _T(";")))
       m_DictionaryWords.Add(strWord);
   }
+  m_DictionaryWords.Sort();
   
   DictFile.Close();
   return true;
