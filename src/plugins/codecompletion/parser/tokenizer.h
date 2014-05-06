@@ -22,14 +22,19 @@ public:
     unsigned long operator()(const wxString& x) const
     {
         const size_t len = x.length();
-        const size_t intWxChar = sizeof(unsigned int) / sizeof(wxChar);
-        const size_t shortWxChar = sizeof(unsigned short) / sizeof(wxChar);
+#if !wxCHECK_VERSION(3, 0, 0)
+        typedef wxChar wxStringCharType;
+#endif
+        const wxStringCharType *buffer = x.wx_str();
+        const size_t intWxChar = sizeof(unsigned int) / sizeof(wxStringCharType);
+        const size_t shortWxChar = sizeof(unsigned short) / sizeof(wxStringCharType);
+
         if (len >= intWxChar)
-            return size_t((128 ^ len) + *((unsigned int*)((const wxChar*)x + len - intWxChar)));
+            return size_t((128 ^ len) + *((unsigned int*)(buffer + len - intWxChar)));
         else if (len >= shortWxChar)
-            return size_t((256 ^ len) + *((unsigned short*)((const wxChar*)x + len - shortWxChar)));
+            return size_t((256 ^ len) + *((unsigned short*)(buffer + len - shortWxChar)));
         else
-            return size_t((512 ^ len) + *((const wxChar*)x + len - 1));
+            return size_t((512 ^ len) + *(buffer + len - 1));
     }
     HashForWxStringMap& operator=(const HashForWxStringMap&) { return *this; }
 };
