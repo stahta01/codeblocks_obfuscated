@@ -8,8 +8,8 @@
  **************************************************************/
 
 #ifdef WX_PRECOMP
-#include "wx_pch.h"
-#endif
+[IF WANTUSERPCH][PCH_INCLUDE][ELSE]#include <wx/wxprec.h>
+[ENDIF WANTUSERPCH]#endif
 
 #ifdef __BORLANDC__
 #pragma hdrstop
