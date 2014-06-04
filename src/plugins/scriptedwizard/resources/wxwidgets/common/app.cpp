@@ -14,7 +14,11 @@
 #ifdef __BORLANDC__
 #pragma hdrstop
 #endif //__BORLANDC__
-
+[IF WXFB]
+#ifndef WX_PRECOMP
+#include <wx/wx.h>
+#endif // WX_PRECOMP
+[ENDIF WXFB]
 #include "[FILENAME_PREFIX]App.h"
 #include "[FILENAME_PREFIX]Main.h"
 

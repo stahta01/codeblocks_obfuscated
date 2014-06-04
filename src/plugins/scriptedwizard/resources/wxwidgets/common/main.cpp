@@ -14,6 +14,14 @@
 #ifdef __BORLANDC__
 #pragma hdrstop
 #endif //__BORLANDC__
+[IF WXFB]#ifndef WX_PRECOMP
+#include <wx/wx.h>
+#endif // WX_PRECOMP[ENDIF WXFB]
+[IF NONE]#ifndef WX_PRECOMP
+#include <wx/wx.h>
+#endif // WX_PRECOMP[ENDIF NONE]
+[IF WXDIALOG][IF NONE]#include <wx/button.h>
+#include <wx/statline.h>[ENDIF NONE][ENDIF WXDIALOG]
 
 #include "[FILENAME_PREFIX]Main.h"
 

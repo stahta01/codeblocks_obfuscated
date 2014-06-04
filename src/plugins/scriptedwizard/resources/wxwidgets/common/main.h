@@ -10,13 +10,11 @@
 #ifndef [PROJECT_HDR]MAIN_H
 #define [PROJECT_HDR]MAIN_H
 
-[IF NONE]#ifndef WX_PRECOMP
-    #include <wx/wx.h>
-#endif[ENDIF NONE]
+[IF WXFRAME]#include <wx/frame.h>
 
 #include "[FILENAME_PREFIX]App.h"
 
-[IF WXFRAME][IF NONE]class [CLASS_PREFIX]Frame: public wxFrame
+[IF NONE]class [CLASS_PREFIX]Frame: public wxFrame
 {
     public:
         [CLASS_PREFIX]Frame(wxFrame *frame, const wxString& title);
@@ -44,8 +42,14 @@ class [CLASS_PREFIX]Frame: public GUIFrame
         virtual void OnQuit(wxCommandEvent& event);
         virtual void OnAbout(wxCommandEvent& event);
 };[ENDIF WXFB][ENDIF WXFRAME]
-[IF WXDIALOG][IF NONE]#include <wx/button.h>
-#include <wx/statline.h>
+[IF WXDIALOG][IF NONE]#include <wx/dialog.h>
+
+#include "[FILENAME_PREFIX]App.h"
+
+class wxButton;
+class wxStaticLine;
+class wxStaticText;
+
 class [CLASS_PREFIX]Dialog: public wxDialog
 {
     public:
