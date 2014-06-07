@@ -10,13 +10,6 @@
 #ifndef [GUARD_WORD]
 #define [GUARD_WORD]
 
-// For compilers that support precompilation, includes <wx/wx.h>
-#include <wx/wxprec.h>
-
-#ifndef WX_PRECOMP
-    #include <wx/wx.h>
-#endif
-
 #include <cbplugin.h> // for "class cbMimePlugin"
 
 class [PLUGIN_NAME] : public cbMimePlugin
