@@ -106,7 +106,7 @@ wxWindow* ToDoListView::CreateControl(wxWindow* parent)
 
     hbs->Add(new wxStaticText(m_pPanel, wxID_ANY, _("Scope:")), 0, wxTOP, 4);
 
-    m_pSource = new wxComboBox(m_pPanel, idSource, wxEmptyString, wxDefaultPosition, wxDefaultSize, 4, &choices[0], wxCB_READONLY);
+    m_pSource = new wxComboBox(m_pPanel, idSource, wxEmptyString, wxDefaultPosition, wxDefaultSize, choices, wxCB_READONLY);
     int source = Manager::Get()->GetConfigManager(_T("todo_list"))->ReadInt(_T("source"), 0);
     m_pSource->SetSelection(source);
     hbs->Add(m_pSource, 0, wxLEFT | wxRIGHT, 8);
@@ -153,8 +153,8 @@ void ToDoListView::Parse()
     if (m_Ignore || (m_pPanel && !m_pPanel->IsShownOnScreen()) )
         return; // Reentrancy
 
-    Clear();
-    m_ItemsMap.clear();
+    Clear(); // clear the gui
+    m_ItemsMap.clear(); // clear the data
     m_Items.Clear();
 
     switch (m_pSource->GetSelection())
@@ -307,22 +307,25 @@ void ToDoListView::FillList()
         cbEditor* ed = Manager::Get()->GetEditorManager()->GetBuiltinEditor(Manager::Get()->GetEditorManager()->GetActiveEditor());
         if (ed)
             filename = ed->GetFilename();
+        // m_Items only contains items belong to m_ItemsMap[filename]
         for (unsigned int i = 0; i < m_ItemsMap[filename].size(); i++)
             m_Items.Add(m_ItemsMap[filename][i]);
     }
     else
-    {
+    {   // m_Items contains all the items belong to m_ItemsMap
         for (it = m_ItemsMap.begin();it != m_ItemsMap.end();++it)
         {
             for (unsigned int i = 0; i < it->second.size(); i++)
                 m_Items.Add(it->second[i]);
         }
     }
-
+    // m_Items are all the elements going to show in the GUI, so sort it
     SortList();
+    // since m_Items is sorted already, we now show them up
     FillListControl();
 
     control->Thaw();
+    // reset the user selection list
     LoadUsers();
 }
 
@@ -467,9 +470,13 @@ void ToDoListView::ParseBuffer(const wxString& buffer, const wxString& filename)
 {
     // this is the actual workhorse...
 
-    HighlightLanguage hlang = Manager::Get()->GetEditorManager()->GetColourSet()->GetLanguageForFilename(filename);
-    CommentToken cmttoken = Manager::Get()->GetEditorManager()->GetColourSet()->GetCommentToken(hlang);
-    wxString langName = Manager::Get()->GetEditorManager()->GetColourSet()->GetLanguageName(hlang);
+    EditorColourSet* colour_set = Manager::Get()->GetEditorManager()->GetColourSet();
+    if (!colour_set)
+        return;
+
+    HighlightLanguage hlang = colour_set->GetLanguageForFilename(filename);
+    CommentToken cmttoken = colour_set->GetCommentToken(hlang);
+    wxString langName = colour_set->GetLanguageName(hlang);
 
     m_ItemsMap[filename].clear();
 
@@ -691,17 +698,26 @@ void ToDoListView::OnDoubleClick(cb_unused wxCommandEvent& event)
     if (file.IsEmpty() || line < 0)
         return;
 
-    // jump to file/line selected
-    cbEditor* ed = Manager::Get()->GetEditorManager()->Open(file);
+    // when double clicked, jump to file/line selected. Note that the opened file should already be
+    // parsed, so no need to refresh the list in any reason.
+    bool savedIgnore = m_Ignore;
+    m_Ignore = true; // no need to parse the files
+
+    // If the file is already opened in the editor, no need to open it again, just do a switch. Note
+    // that Open(file) will also send an Activated event.
+    cbEditor* ed = (cbEditor*)Manager::Get()->GetEditorManager()->IsBuiltinOpen(file);
+    if (!ed)
+        ed = Manager::Get()->GetEditorManager()->Open(file); //this will send a editor activated event
+
     if (ed)
     {
-        bool old_ignore = m_Ignore;
-        m_Ignore = true;
-        ed->Activate();
+        ed->Activate(); //this does not run FillList, because m_Ignore is true here
         ed->GotoLine(line);
+        // FIXME (ollydbg#1#06/03/14): if the List is rebuild (m_Items rebuild), does the idx remain
+        // the same value?
         FocusEntry(idx);
-        m_Ignore = old_ignore;
     }
+    m_Ignore = savedIgnore;
 }
 
 void ToDoListView::OnColClick(wxListEvent& event)

@@ -395,10 +395,13 @@ Parser::Parser(wxEvtHandler* parent, cbProject* project) :
 
 Parser::~Parser()
 {
-    CC_LOCKER_TRACK_P_MTX_LOCK(ParserCommon::s_ParserMutex)
+    // Don't wrap the s_ParserMutex lock around TerminateAllThreads(), since, it will cause a deadlock
+    // in TerminateAllThreads() when calling DeleteParser() before parsing has finished.
 
     DisconnectEvents();
     TerminateAllThreads();
+
+    CC_LOCKER_TRACK_P_MTX_LOCK(ParserCommon::s_ParserMutex)
 
     if (ParserCommon::s_CurrentParser == this)
         ParserCommon::s_CurrentParser = nullptr;
@@ -528,7 +531,7 @@ void Parser::AddParse(const wxString& filename)
     CC_LOCKER_TRACK_P_MTX_UNLOCK(ParserCommon::s_ParserMutex)
 }
 
-bool Parser::Parse(const wxString& filename, bool isLocal, bool locked, LoaderBase* loader)
+bool Parser::Parse(const wxString& filename, bool isLocal, bool locked)
 {
     ParserThreadOptions opts;
 
@@ -543,7 +546,7 @@ bool Parser::Parse(const wxString& filename, bool isLocal, bool locked, LoaderBa
 
     opts.storeDocumentation    = m_Options.storeDocumentation;
 
-    opts.loader                = loader; // maybe 0 at this point
+    opts.loader                = nullptr; // must be 0 at this point
 
     bool result = false;
     do
@@ -564,16 +567,15 @@ bool Parser::Parse(const wxString& filename, bool isLocal, bool locked, LoaderBa
 
         if (!canparse)
         {
-           if (opts.loader) // if a loader is already open at this point, the caller must clean it up
-               CCLogger::Get()->DebugLog(_T("Parser::Parse(): CodeCompletion Plugin: FileLoader memory leak ")
-                                         _T("while loading file ") + filename);
-           break;
+
+            CCLogger::Get()->DebugLog(_T("Parser::Parse(): file already parsed or reserved for parsing") + filename);
+            break;
         }
 
-        // this should always be true
-        // memory will leak if a loader has already been initialized before this point
-        if (!opts.loader)
-            opts.loader = Manager::Get()->GetFileManager()->Load(filename, m_NeedsReparse);
+        // once the Load function is called, it will return a loader pointer, and start loading
+        // the file content in a background thread(see: BackgroundThread class)
+        // the loader will be deleted in the ParserThread::InitTokenizer() function.
+        opts.loader = Manager::Get()->GetFileManager()->Load(filename, m_NeedsReparse);
 
         ParserThread* thread = new ParserThread(this, filename, isLocal, opts, m_TokenTree);
         TRACE(_T("Parser::Parse(): Parsing %s"), filename.wx_str());
@@ -828,7 +830,9 @@ bool Parser::Reparse(const wxString& filename, cb_unused bool isLocal)
 
 void Parser::TerminateAllThreads()
 {
-    // FIXME (ollydbg#1#): Do we need to use a mutex to protect the m_PoolTask accessing?
+    // use a mutex to protect the m_PoolTask from multiply threads accessing
+    CC_LOCKER_TRACK_P_MTX_LOCK(ParserCommon::s_ParserMutex)
+
     while (!m_PoolTask.empty())
     {
         PTVector& v = m_PoolTask.front();
@@ -837,6 +841,11 @@ void Parser::TerminateAllThreads()
         m_PoolTask.pop();
     }
 
+    CC_LOCKER_TRACK_P_MTX_UNLOCK(ParserCommon::s_ParserMutex)
+
+    // NOTE: This should not be locked with s_ParserMutex, otherwise we'll be stuck in an
+    // infinite loop below since the worker thread also enters s_ParserMutex.
+    // In fact cbThreadPool maintains it's own mutex, so m_Pool is probably threadsafe.
     m_Pool.AbortAllTasks();
     while (!m_Pool.Done())
         wxMilliSleep(1);

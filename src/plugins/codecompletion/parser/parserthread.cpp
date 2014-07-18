@@ -463,6 +463,7 @@ bool ParserThread::InitTokenizer()
                     TRACE(_T("InitTokenizer() : m_Filename='%s', m_FileSize=%u."), m_Filename.wx_str(), m_FileSize);
 
                     bool ret = m_Tokenizer.Init(m_Filename, m_Options.loader);
+                    // must delete the loader, since it was allocated by SDK's Load() function
                     Delete(m_Options.loader);
 
                     if (!ret) { TRACE(_T("InitTokenizer() : Could not initialise tokenizer for file '%s'."), m_Filename.wx_str()); }
@@ -714,8 +715,6 @@ void ParserThread::DoParse()
             {
                 if (!m_Options.useBuffer || m_Options.bufferSkipBlocks)
                     SkipToOneOfChars(ParserConsts::semicolonclbrace, true, true);
-                else
-                    m_Tokenizer.GetToken(); // skip arguments
                 m_Str.Clear();
             }
             else if (token == ParserConsts::kw_enum)

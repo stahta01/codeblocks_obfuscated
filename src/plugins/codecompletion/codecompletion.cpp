@@ -49,7 +49,6 @@
 #include <filegroupsandmasks.h>
 #include <incrementalselectlistdlg.h>
 #include <multiselectdlg.h>
-#include <prep.h>
 
 #include "codecompletion.h"
 
@@ -237,8 +236,6 @@ namespace CodeCompletionHelper
                 if (!word.IsEmpty())
                 {
                     NameUnderCursor.Clear();
-                    if (GetLastNonWhitespaceChar(control, start) == _T('~'))
-                        NameUnderCursor << _T('~');
                     NameUnderCursor << word;
                     ReturnValue = true;
                     IsInclude = false;
@@ -397,7 +394,7 @@ static const char* header_file_xpm[] = {
 "  ############  ",
 "                "};
 
-// menu IDS
+// menu IDs
 // just because we don't know other plugins' used identifiers,
 // we use wxNewId() to generate a guaranteed unique ID ;), instead of enum
 // (don't forget that, especially in a plugin)
@@ -530,6 +527,7 @@ CodeCompletion::~CodeCompletion()
     Disconnect(idSystemHeadersThreadFinish,    wxEVT_COMMAND_MENU_SELECTED, CodeBlocksThreadEventHandler(CodeCompletion::OnSystemHeadersThreadFinish));
     Disconnect(idSystemHeadersThreadError,     wxEVT_COMMAND_MENU_SELECTED, CodeBlocksThreadEventHandler(CodeCompletion::OnSystemHeadersThreadError) );
 
+    // clean up all the running thread
     while (!m_SystemHeadersThreads.empty())
     {
         SystemHeadersThread* thread = m_SystemHeadersThreads.front();
@@ -585,8 +583,7 @@ void CodeCompletion::OnAttach()
     pm->RegisterEventSink(cbEVT_PROJECT_FILE_REMOVED, new cbEventFunctor<CodeCompletion, CodeBlocksEvent>(this, &CodeCompletion::OnProjectFileRemoved));
     pm->RegisterEventSink(cbEVT_PROJECT_FILE_CHANGED, new cbEventFunctor<CodeCompletion, CodeBlocksEvent>(this, &CodeCompletion::OnProjectFileChanged));
 
-    pm->RegisterEventSink(cbEVT_EDITOR_SAVE,          new cbEventFunctor<CodeCompletion, CodeBlocksEvent>(this, &CodeCompletion::OnEditorSaveOrModified));
-    pm->RegisterEventSink(cbEVT_EDITOR_MODIFIED,      new cbEventFunctor<CodeCompletion, CodeBlocksEvent>(this, &CodeCompletion::OnEditorSaveOrModified));
+    pm->RegisterEventSink(cbEVT_EDITOR_SAVE,          new cbEventFunctor<CodeCompletion, CodeBlocksEvent>(this, &CodeCompletion::OnEditorSave));
     pm->RegisterEventSink(cbEVT_EDITOR_OPEN,          new cbEventFunctor<CodeCompletion, CodeBlocksEvent>(this, &CodeCompletion::OnEditorOpen));
     pm->RegisterEventSink(cbEVT_EDITOR_ACTIVATED,     new cbEventFunctor<CodeCompletion, CodeBlocksEvent>(this, &CodeCompletion::OnEditorActivated));
     pm->RegisterEventSink(cbEVT_EDITOR_CLOSE,         new cbEventFunctor<CodeCompletion, CodeBlocksEvent>(this, &CodeCompletion::OnEditorClosed));
@@ -618,9 +615,8 @@ void CodeCompletion::OnRelease(bool appShutDown)
 
 /* TODO (mandrav#1#): Delete separator line too... */
     if (m_EditMenu)
-    {
         m_EditMenu->Delete(idMenuRenameSymbols);
-    }
+
     if (m_SearchMenu)
     {
         m_SearchMenu->Delete(idMenuGotoFunction);
@@ -844,8 +840,10 @@ bool CodeCompletion::BuildToolBar(wxToolBar* toolBar)
 
 CodeCompletion::CCProviderStatus CodeCompletion::GetProviderStatusFor(cbEditor* ed)
 {
-    if (ed->GetLanguage() == ed->GetColourSet()->GetHighlightLanguage(wxT("C/C++")))
+    EditorColourSet *colour_set = ed->GetColourSet();
+    if (colour_set && ed->GetLanguage() == colour_set->GetHighlightLanguage(wxT("C/C++")))
         return ccpsActive;
+
     switch (ParserCommon::FileType(ed->GetFilename()))
     {
         case ParserCommon::ftHeader:
@@ -1007,8 +1005,8 @@ void CodeCompletion::DoCodeComplete(int caretPos, cbEditor* ed, std::vector<CCTo
                 if (s_DebugSmartSense)
                     CCLogger::Get()->DebugLog(_T("Last AI search was global: adding theme keywords in list"));
 
-                EditorColourSet* theme = ed->GetColourSet();
-                if (theme)
+                EditorColourSet* colour_set = ed->GetColourSet();
+                if (colour_set)
                 {
                     wxString lastSearch = m_NativeParser.LastAIGlobalSearch().Lower();
                     int iidx = ilist->GetImageCount();
@@ -1016,8 +1014,8 @@ void CodeCompletion::DoCodeComplete(int caretPos, cbEditor* ed, std::vector<CCTo
                     // theme keywords
                     HighlightLanguage lang = ed->GetLanguage();
                     if (lang == HL_NONE)
-                        lang = theme->GetLanguageForFilename(ed->GetFilename());
-                    wxString strLang = theme->GetLanguageName(lang);
+                        lang = colour_set->GetLanguageForFilename(ed->GetFilename());
+                    wxString strLang = colour_set->GetLanguageName(lang);
                     // if its sourcecode/header file and a known fileformat, show the corresponding icon
                     if (isC && strLang == wxT("C/C++"))
                         stc->RegisterImage(iidx, wxBitmap(cpp_keyword_xpm));
@@ -1032,7 +1030,7 @@ void CodeCompletion::DoCodeComplete(int caretPos, cbEditor* ed, std::vector<CCTo
                         if (!m_LexerKeywordsToInclude[i])
                             continue;
 
-                        wxString keywords = theme->GetKeywords(lang, i);
+                        wxString keywords = colour_set->GetKeywords(lang, i);
                         wxStringTokenizer tkz(keywords, wxT(" \t\r\n"), wxTOKEN_STRTOK);
                         while (tkz.HasMoreTokens())
                         {
@@ -1143,7 +1141,9 @@ void CodeCompletion::DoCodeCompleteIncludes(cbEditor* ed, int& tknStart, int tkn
         return;
     ++keyPos;
 
-    // now, we are after the quote prompt
+    // now, we are after the quote prompt, "filename" is the text we already typed after the
+    // #include directive, such as #include <abc|  , so that we need to prompt all the header files
+    // which has the prefix "abc"
     wxString filename = line.SubString(keyPos, tknEnd - lineStartPos - 1);
     filename.Replace(wxT("\\"), wxT("/"), true);
     if (filename.Last() == wxT('"') || filename.Last() == wxT('>'))
@@ -1158,6 +1158,8 @@ void CodeCompletion::DoCodeCompleteIncludes(cbEditor* ed, int& tknStart, int tkn
 
     // #include < or #include "
     {
+        // since we are going to access the m_SystemHeadersMap, we add a locker here
+        // here we collect all the header files names which is under "system include search dirs"
         wxCriticalSectionLocker locker(m_SystemHeadersThreadCS);
         wxArrayString& incDirs = GetSystemIncludeDirs(project, project ? project->GetModified() : true);
         for (size_t i = 0; i < incDirs.GetCount(); ++i)
@@ -1274,7 +1276,7 @@ std::vector<CodeCompletion::CCToken> CodeCompletion::GetTokenAt(int pos, cbEdito
     if (!IsAttached() || !m_InitDone)
         return tokens;
 
-    // ignore comments, strings, preprocesor, etc
+    // ignore comments, strings, preprocessors, etc
     cbStyledTextCtrl* stc = ed->GetControl();
     const int style = stc->GetStyleAt(pos);
     if (   stc->IsString(style)
@@ -1497,6 +1499,8 @@ wxArrayString CodeCompletion::GetLocalIncludeDirs(cbProject* project, const wxAr
     for (size_t i = 0; i < buildTargets.GetCount(); ++i)
         GetAbsolutePath(prjPath, project->GetBuildTarget(buildTargets[i])->GetIncludeDirs(), dirs);
 
+    // if a path has prefix with the project's path, it is a local include search dir
+    // other wise, it is a system level include search dir, we try to collect all the system dirs
     wxArrayString sysDirs;
     for (size_t i = 0; i < dirs.GetCount();)
     {
@@ -1528,7 +1532,7 @@ wxArrayString& CodeCompletion::GetSystemIncludeDirs(cbProject* project, bool for
     static cbProject*    lastProject = nullptr;
     static wxArrayString incDirs;
 
-    if (!force && project == lastProject)
+    if (!force && project == lastProject) // force == false means we can use the cached dirs
         return incDirs;
     else
     {
@@ -1545,10 +1549,13 @@ wxArrayString& CodeCompletion::GetSystemIncludeDirs(cbProject* project, bool for
         return incDirs;
 
     incDirs = parser->GetIncludeDirs();
+    // we try to remove the dirs which belong to the project
     for (size_t i = 0; i < incDirs.GetCount();)
     {
         if (incDirs[i].Last() != wxFILE_SEP_PATH)
             incDirs[i].Append(wxFILE_SEP_PATH);
+        // since this function only get "system include dirs", so the dirs which has prjPath prefix
+        // should be removed
         if (project && incDirs[i].StartsWith(prjPath))
             incDirs.RemoveAt(i);
         else
@@ -1896,8 +1903,11 @@ void CodeCompletion::OnGotoDeclaration(wxCommandEvent& event)
     const int startPos = editor->GetControl()->WordStartPosition(pos, true);
     const int endPos   = editor->GetControl()->WordEndPosition(pos, true);
     wxString target;
+    // if there is a tilde "~", the token can either be a destructor or an Bitwise NOT (One's
+    // Complement) operator
+    bool isDestructor = false;
     if (CodeCompletionHelper::GetLastNonWhitespaceChar(editor->GetControl(), startPos) == _T('~'))
-        target << _T('~');
+        isDestructor = true;
     target << editor->GetControl()->GetTextRange(startPos, endPos);
     if (target.IsEmpty())
         return;
@@ -1914,8 +1924,9 @@ void CodeCompletion::OnGotoDeclaration(wxCommandEvent& event)
 
     CC_LOCKER_TRACK_TT_MTX_LOCK(s_TokenTreeMutex)
 
-    // handle destructor function
-    if (target[0] == _T('~'))
+    // handle destructor function, first we try to see if it is a destructor, we simply do a semantic
+    // check of the token under cursor, otherwise, it is a variable.
+    if (isDestructor)
     {
         TokenIdxSet tmp = result;
         result.clear();
@@ -1925,11 +1936,15 @@ void CodeCompletion::OnGotoDeclaration(wxCommandEvent& event)
             const Token* token = tree->at(*it);
             if (token && token->m_TokenKind == tkClass)
             {
-                token = tree->at(tree->TokenExists(target, token->m_Index, tkDestructor));
+                token = tree->at(tree->TokenExists(_T("~") + target, token->m_Index, tkDestructor));
                 if (token)
                     result.insert(token->m_Index);
             }
         }
+
+        // no destructor found, this could be a variable.
+        if (result.empty())
+            result = tmp;
     }
     else // handle constructor and functions
     {
@@ -2240,22 +2255,26 @@ void CodeCompletion::OnWorkspaceChanged(CodeBlocksEvent& event)
 {
     // EVT_WORKSPACE_CHANGED is a powerful event, it's sent after any project
     // has finished loading or closing. It's the *LAST* event to be sent when
-    // the workspace has been changed, and it's not sent if the application is
-    // shutting down. So it's the ideal time to parse files and update your
-    // widgets.
+    // the workspace has been changed. So it's the ideal time to parse files
+    // and update your widgets.
     if (IsAttached() && m_InitDone)
     {
         cbProject* project = Manager::Get()->GetProjectManager()->GetActiveProject();
-        if (project && !m_NativeParser.GetParserByProject(project))
-            m_NativeParser.CreateParser(project);
+        // if we receive a workspace changed event, but the project is NULL, this means the user
+        // try to close the application, so we don't need to update the UI here.
+        if (project)
+        {
+            if (!m_NativeParser.GetParserByProject(project))
+                m_NativeParser.CreateParser(project);
 
-        // Update the Function toolbar
-        TRACE(_T("CodeCompletion::OnWorkspaceChanged: Starting m_TimerToolbar."));
-        m_TimerToolbar.Start(TOOLBAR_REFRESH_DELAY, wxTIMER_ONE_SHOT);
+            // Update the Function toolbar
+            TRACE(_T("CodeCompletion::OnWorkspaceChanged: Starting m_TimerToolbar."));
+            m_TimerToolbar.Start(TOOLBAR_REFRESH_DELAY, wxTIMER_ONE_SHOT);
 
-        // Update the class browser
-        if (m_NativeParser.GetParser().ClassBrowserOptions().displayFilter == bdfProject)
-            m_NativeParser.UpdateClassBrowser();
+            // Update the class browser
+            if (m_NativeParser.GetParser().ClassBrowserOptions().displayFilter == bdfProject)
+                m_NativeParser.UpdateClassBrowser();
+        }
     }
     event.Skip();
 }
@@ -2340,7 +2359,7 @@ void CodeCompletion::OnProjectFileChanged(CodeBlocksEvent& event)
     event.Skip();
 }
 
-void CodeCompletion::OnEditorSaveOrModified(CodeBlocksEvent& event)
+void CodeCompletion::OnEditorSave(CodeBlocksEvent& event)
 {
     if (!ProjectManager::IsBusy() && IsAttached() && m_InitDone && event.GetEditor())
     {
@@ -2353,7 +2372,7 @@ void CodeCompletion::OnEditorSaveOrModified(CodeBlocksEvent& event)
         if (it->second.Index(filename) == wxNOT_FOUND)
             it->second.Add(filename);
 
-        TRACE(_T("CodeCompletion::OnEditorSaveOrModified: Starting m_TimerReparsing."));
+        TRACE(_T("CodeCompletion::OnEditorSave: Starting m_TimerReparsing."));
         m_TimerReparsing.Start(EDITOR_ACTIVATED_DELAY + it->second.GetCount() * 10, wxTIMER_ONE_SHOT);
     }
 
@@ -2426,7 +2445,7 @@ void CodeCompletion::OnEditorClosed(CodeBlocksEvent& event)
     // we need to clear CC toolbar only when we are closing last editor
     // in other situations OnEditorActivated does this job
     // If no editors were opened, or a non-buildin-editor was active, disable the CC toolbar
-    if (edm->GetEditorsCount() == 0 || !edm->GetActiveEditor()->IsBuiltinEditor())
+    if (edm->GetEditorsCount() == 0 || !edm->GetActiveEditor() || !edm->GetActiveEditor()->IsBuiltinEditor())
     {
         EnableToolbarTools(false);
 
@@ -2471,7 +2490,7 @@ void CodeCompletion::OnParserStart(wxCommandEvent& event)
     {
         if (m_CCEnableHeaders)
         {
-            wxArrayString&       dirs   = GetSystemIncludeDirs(project, true);
+            wxArrayString&       dirs   = GetSystemIncludeDirs(project, true); // true means update the cache
             SystemHeadersThread* thread = new SystemHeadersThread(this, &m_SystemHeadersThreadCS, m_SystemHeadersMap, dirs);
             m_SystemHeadersThreads.push_back(thread);
         }
@@ -2533,7 +2552,8 @@ void CodeCompletion::OnSystemHeadersThreadFinish(CodeBlocksThreadEvent& event)
 {
     if (m_SystemHeadersThreads.empty())
         return;
-
+    // wait for the current thread died, and remove it from the thread list, then try to run another
+    // thread
     SystemHeadersThread* thread = static_cast<SystemHeadersThread*>(event.GetClientData());
     if (thread == m_SystemHeadersThreads.front())
     {
@@ -2944,7 +2964,7 @@ void CodeCompletion::ParseFunctionsAndFillToolbar()
         funcdata->m_FunctionsScope.clear();
         funcdata->m_NameSpaces.clear();
 
-        // collect the function implementation inforamtion, just find the specified tokens in the TokenTree
+        // collect the function implementation information, just find the specified tokens in the TokenTree
         TokenIdxSet result;
         m_NativeParser.GetParser().FindTokensInFile(filename, result,
                                                     tkAnyFunction | tkEnum | tkClass | tkNamespace);
@@ -3263,7 +3283,11 @@ void CodeCompletion::UpdateEditorSyntax(cbEditor* ed)
     }
     CC_LOCKER_TRACK_TT_MTX_UNLOCK(s_TokenTreeMutex)
 
-    wxString keywords = Manager::Get()->GetEditorManager()->GetColourSet()->GetKeywords(ed->GetLanguage(), 3);
+    EditorColourSet* colour_set = Manager::Get()->GetEditorManager()->GetColourSet();
+    if (!colour_set)
+        return;
+
+    wxString keywords = colour_set->GetKeywords(ed->GetLanguage(), 3);
     for (std::set<wxString>::const_iterator keyIt = varList.begin();
          keyIt != varList.end(); ++keyIt)
     {

@@ -93,6 +93,10 @@ public:
 class EditorReuser : public LoaderBase
 {
 public:
+    /** Gets a UTF8 representation of the editor's content
+     *  @param name the file name opened by the editor
+     *  @param s the editor's content
+     */
     EditorReuser(const wxString& name, const wxString& s)
     {
         fileName = name;
@@ -114,6 +118,14 @@ public:
     FileManager();
     ~FileManager();
 
+    /** Loads a file, once this function is called, the actually loading process is done in the
+     *  worker thread(BackgroundThread).
+     *  @param file the file path, it can an absolute file path, an unc file, or a url file
+     *  @param reuseEditors if true, we try to use the file contents in the editor if the file is
+     *  modified in the editor.
+     *  @return a loader pointer holding the loader, user must delete it later, otherwise memory
+     *  leak will happen.
+     */
     cb_must_consume_result LoaderBase* Load(const wxString& file, bool reuseEditors = false);
 
     bool Save(const wxString& file, const wxString& data, wxFontEncoding encoding, bool bom);

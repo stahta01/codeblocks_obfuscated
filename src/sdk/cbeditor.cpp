@@ -1162,6 +1162,8 @@ void cbEditor::Split(cbEditor::SplitType split)
 
     ConnectEvents(m_pControl2);
 
+    NotifyPlugins(cbEVT_EDITOR_SPLIT);
+
     Thaw();
 }
 
@@ -1195,6 +1197,8 @@ void cbEditor::Unsplit()
     #endif
     // add it in the sizer
     m_pSizer->Add(m_pControl, 1, wxEXPAND);
+    // notify the plugin when the right splitter window is not destroied and the left window is reparented to cbEditor
+    NotifyPlugins(cbEVT_EDITOR_UNSPLIT);
     // destroy the splitter and right control
     DestroySplitView();
     // and layout
@@ -3041,7 +3045,11 @@ void cbEditor::OnContextMenuEntry(wxCommandEvent& event)
         }
     }
     else if (id == idShowFileInProject)
-        Manager::Get()->GetProjectManager()->GetUI().ShowFileInTree(*m_pProjectFile);
+    {
+        cbProjectManagerUI &ui=Manager::Get()->GetProjectManager()->GetUI();
+        ui.SwitchToProjectsPage();
+        ui.ShowFileInTree(*m_pProjectFile);
+    }
     else if (id == idBreakpointAdd)
         AddBreakpoint(m_pData->m_LastMarginMenuLine);
     else if (id == idBreakpointEdit)

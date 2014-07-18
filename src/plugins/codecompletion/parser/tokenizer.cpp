@@ -95,7 +95,6 @@ Tokenizer::Tokenizer(TokenTree* tokenTree, const wxString& filename) :
     m_TokenIndex(0),
     m_LineNumber(1),
     m_NestLevel(0),
-    m_SavedNestingLevel(0),
     m_UndoTokenIndex(0),
     m_UndoLineNumber(1),
     m_UndoNestLevel(0),
@@ -103,6 +102,9 @@ Tokenizer::Tokenizer(TokenTree* tokenTree, const wxString& filename) :
     m_PeekTokenIndex(0),
     m_PeekLineNumber(0),
     m_PeekNestLevel(0),
+    m_SavedTokenIndex(0),
+    m_SavedLineNumber(1),
+    m_SavedNestingLevel(0),
     m_IsOK(false),
     m_State(tsSkipUnWanted),
     m_Loader(0),
@@ -193,13 +195,15 @@ void Tokenizer::BaseInit()
     m_TokenIndex           = 0;
     m_LineNumber           = 1;
     m_NestLevel            = 0;
-    m_SavedNestingLevel    = 0;
     m_UndoTokenIndex       = 0;
     m_UndoLineNumber       = 1;
     m_UndoNestLevel        = 0;
     m_PeekTokenIndex       = 0;
     m_PeekLineNumber       = 0;
     m_PeekNestLevel        = 0;
+    m_SavedTokenIndex      = 0;
+    m_SavedLineNumber      = 1;
+    m_SavedNestingLevel    = 0;
     m_IsOK                 = false;
     m_FirstRemainingLength = 0;
     m_RepeatReplaceCount   = 0;
@@ -519,9 +523,11 @@ void Tokenizer::ReadParentheses(wxString& str)
     // we create a local buffer here, so the data is copied from m_Buffer to buffer
     // once the local buffer is full, we append the content in local buffer to the result str
     static const size_t maxBufferLen = 4093;
+    // local buffer
     wxChar buffer[maxBufferLen + 3];
     buffer[0] = _T('$'); // avoid segfault error, because we have some *(p - 1) = x in the code
     wxChar* realBuffer = buffer + 1;
+    // p points to the local buffer
     wxChar* p = realBuffer;
 
     int level = 0; // brace level of '(' and ')'
@@ -556,7 +562,7 @@ void Tokenizer::ReadParentheses(wxString& str)
         case _T(')'):
             {
                 if (*(p - 1) <= _T(' '))
-                    --p; // if previous char is a space, we can put ')' there, so we save one char
+                    --p; // if previous char is a space, we overwrite the space with a ')', so we save one char
                 --level;
                 *p = ch;
                 ++p;
@@ -566,8 +572,8 @@ void Tokenizer::ReadParentheses(wxString& str)
         case _T('\''):
         case _T('"'):
             {
-                MoveToNextChar();     // skip the leading '"' or '\'
-                SkipToStringEnd(ch);  // m_TokenIndex point to the trailing '"' or '\' now
+                MoveToNextChar();     // skip the leading '"' or '\''
+                SkipToStringEnd(ch);  // m_TokenIndex point to the trailing '"' or '\'' now
                 MoveToNextChar();     // move to the char after trailing char
                 const size_t writeLen = m_TokenIndex - startIndex; // the string length
                 const size_t usedLen = p - realBuffer;
@@ -1034,35 +1040,24 @@ wxString Tokenizer::PeekToken()
     if (!m_PeekAvailable)
     {
         m_PeekAvailable = true;
-
-        unsigned int savedTokenIndex = m_TokenIndex;
-        unsigned int savedLineNumber = m_LineNumber;
-        unsigned int savedNestLevel  = m_NestLevel;
-
-        size_t savedReplaceCount = m_RepeatReplaceCount;
+        //NOTE: The m_Saved... vars will be reset to the correct position
+        // as necessary when a ReplaceBufferText() is done.
+        m_SavedTokenIndex   = m_TokenIndex;
+        m_SavedLineNumber   = m_LineNumber;
+        m_SavedNestingLevel = m_NestLevel;
 
         if (SkipUnwanted())
             m_PeekToken = DoGetToken();
         else
             m_PeekToken.Clear();
 
-        m_PeekTokenIndex             = m_TokenIndex;
-        m_PeekLineNumber             = m_LineNumber;
-        m_PeekNestLevel              = m_NestLevel;
-        // Check whether a ReplaceBufferText() was done in DoGetToken().
-        // We assume m_Undo... have already been reset in ReplaceBufferText().
-        if (savedReplaceCount < m_RepeatReplaceCount)
-        {
-            m_TokenIndex             = m_UndoTokenIndex;
-            m_LineNumber             = m_UndoLineNumber;
-            m_NestLevel              = m_UndoNestLevel;
-        }
-        else
-        {
-            m_TokenIndex             = savedTokenIndex;
-            m_LineNumber             = savedLineNumber;
-            m_NestLevel              = savedNestLevel;
-        }
+        m_PeekTokenIndex    = m_TokenIndex;
+        m_PeekLineNumber    = m_LineNumber;
+        m_PeekNestLevel     = m_NestLevel;
+
+        m_TokenIndex        = m_SavedTokenIndex;
+        m_LineNumber        = m_SavedLineNumber;
+        m_NestLevel         = m_SavedNestingLevel;
     }
 
     return m_PeekToken;
@@ -1073,8 +1068,10 @@ wxString Tokenizer::PeekToken()
  */
 void Tokenizer::UngetToken()
 {
-    if (m_TokenIndex == m_UndoTokenIndex) // this means we have already run a UngetToken() before.
-        return;
+    // NOTE: Test below could be true even if we haven't run UngetToken() before (eg, if we have just
+    // reset the undo token)
+    // if (m_TokenIndex == m_UndoTokenIndex) // this means we have already run a UngetToken() before.
+    //     return;
 
     m_PeekTokenIndex = m_TokenIndex;
     m_PeekLineNumber = m_LineNumber;
@@ -1199,9 +1196,9 @@ wxString Tokenizer::DoGetToken()
         str = c;
         MoveToNextChar();
     }
-    // m_FirstRemainingLength != 0 means were are in macro replace mode, but when m_TokenIndex is
-    // go forward beyond the point where we start the macro replacement, we should stop and reset
-    // to non-macro replace mode
+    // m_FirstRemainingLength != 0 means we are in macro replace mode, but when m_TokenIndex goes
+    // forward and exceed the anchor point where we start the macro replacement, we should stop and
+    // reset to non-macro replace mode
     if (m_FirstRemainingLength != 0 && m_BufferLen - m_FirstRemainingLength < m_TokenIndex)
     {
         m_FirstRemainingLength = 0;
@@ -1216,6 +1213,7 @@ wxString Tokenizer::DoGetToken()
 
 void Tokenizer::ReplaceMacro(wxString& str)
 {
+    // this indicates we are already in macro replacement mode
     if (m_RepeatReplaceCount > 0)
     {
         const int id = m_TokenTree->TokenExists(str, -1, tkMacroDef);
@@ -1236,6 +1234,9 @@ void Tokenizer::ReplaceMacro(wxString& str)
                 }
             }
         }
+        // if in macro expansion mode, we don't want to let the user replacement rule executed
+        // again, so just returned
+        return;
     }
 
     wxStringHashMap::const_iterator it = s_Replacements.find(str);
@@ -1295,6 +1296,15 @@ void Tokenizer::ReplaceMacro(wxString& str)
             SkipUnwanted();
             str = DoGetToken();
         }
+    }
+    else if (it->second[0] == _T('@'))
+    {
+        // trigger the macro replacement mode, so that we can look up the keyword in TokenTree for a
+        // macro usage, note that ReplaceBufferText() below just move the token index backword, but
+        // don't change the buffer
+        if(ReplaceBufferText(it->first, false))
+            str = DoGetToken();
+
     }
     else // for other user defined rules, just do a buffer content replacement
     {
@@ -1382,6 +1392,11 @@ bool Tokenizer::CalcConditionExpression()
 
     // reset tokenizer's functionality
     m_State = oldState;
+
+    // reset undo token
+    m_SavedTokenIndex   = m_UndoTokenIndex = m_TokenIndex;
+    m_SavedLineNumber   = m_UndoLineNumber = m_LineNumber;
+    m_SavedNestingLevel = m_UndoNestLevel  = m_NestLevel;
 
     exp.ConvertInfixToPostfix();
     if (exp.CalcPostfix())
@@ -1484,6 +1499,7 @@ PreprocessorType Tokenizer::GetPreprocessorType()
 {
     const unsigned int undoIndex = m_TokenIndex;
     const unsigned int undoLine = m_LineNumber;
+    const unsigned int undoNest = m_NestLevel;
 
     MoveToNextChar();
     while (SkipWhiteSpace() || SkipComment())
@@ -1533,6 +1549,7 @@ PreprocessorType Tokenizer::GetPreprocessorType()
 
     m_TokenIndex = undoIndex;
     m_LineNumber = undoLine;
+    m_NestLevel = undoNest;
     return ptOthers;
 }
 
@@ -1686,7 +1703,8 @@ void Tokenizer::SplitArguments(wxArrayString& results)
         else if (token == _T(")"))
             --level;
 
-        if (token == _T(","))
+        // comma is a delimit only it is not wrapper by ()
+        if (token == _T(",") && level == 1)
         {
             results.Add(piece);
             piece.Clear();
@@ -1774,10 +1792,10 @@ bool Tokenizer::ReplaceBufferText(const wxString& target, bool updatePeekToken)
     // Fix token index
     m_TokenIndex -= bufferLen;
 
-    // Fix undo position
-    m_UndoTokenIndex = m_TokenIndex;
-    m_UndoLineNumber = m_LineNumber;
-    m_UndoNestLevel = m_NestLevel;
+    // Reset undo token
+    m_SavedTokenIndex   = m_UndoTokenIndex = m_TokenIndex;
+    m_SavedLineNumber   = m_UndoLineNumber = m_LineNumber;
+    m_SavedNestingLevel = m_UndoNestLevel  = m_NestLevel;
 
     // Update the peek token
     if (m_PeekAvailable && updatePeekToken)

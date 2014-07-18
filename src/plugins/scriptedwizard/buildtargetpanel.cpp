@@ -7,10 +7,16 @@
  * $HeadURL$
  */
 
-#include "prep.h"
+#include <sdk.h>
+#ifndef CB_PRECOMP
+    //(*InternalHeadersPCH(BuildTargetPanel)
+    #include <wx/intl.h>
+    #include <wx/string.h>
+    //*)
+#endif // CB_PRECOMP
+
 #include "buildtargetpanel.h"
 
-#include <wx/intl.h>
 
 //(*IdInit(BuildTargetPanel)
 const long BuildTargetPanel::ID_STATICTEXT1 = wxNewId();

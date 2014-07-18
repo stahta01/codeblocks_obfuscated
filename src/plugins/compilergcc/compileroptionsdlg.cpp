@@ -1371,6 +1371,9 @@ void CompilerOptionsDlg::DoSaveCompilerDefinition()
     if (!wxDirExists(ConfigManager::GetFolder(sdDataUser) + wxT("/compilers")))
         wxMkdir(ConfigManager::GetFolder(sdDataUser) + wxT("/compilers"));
     doc.Save(ConfigManager::GetFolder(sdDataUser) + wxT("/compilers/options_") + compiler->GetID() + wxT(".xml"));
+
+    // update the in-memory cache
+    compiler->SetOptions(m_Options);
 } // DoSaveCompilerDefinition
 
 // events
@@ -1907,9 +1910,9 @@ static void QuoteString(wxString &value, const wxString &caption)
 {
     if (NeedQuotes(value))
     {
-        AnnoyingDialog dlgQuestion(caption,
+        AnnoyingDialog dlgQuestion(caption, wxT("Variable quote string"),
                                    _("The value contains spaces or strange characters. Do you want to quote it?"),
-                                   wxART_QUESTION, AnnoyingDialog::YES_NO, AnnoyingDialog::rtYES,
+                                   wxART_QUESTION, AnnoyingDialog::YES_NO, AnnoyingDialog::rtSAVE_CHOICE,
                                    _("&Quote"), _("&Leave unquoted"));
         if (dlgQuestion.ShowModal() == AnnoyingDialog::rtYES)
             ::QuoteStringIfNeeded(value);

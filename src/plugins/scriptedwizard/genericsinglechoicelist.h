@@ -6,11 +6,8 @@
 #ifndef GENERICSINGLECHOICELIST_H
 #define GENERICSINGLECHOICELIST_H
 
-#ifdef __BORLANDC__
-    #pragma hdrstop
-#endif
 
-//(*Headers(GenericSingleChoiceList)
+//(*HeadersPCH(GenericSingleChoiceList)
 #include <wx/sizer.h>
 #include <wx/stattext.h>
 #include <wx/listbox.h>

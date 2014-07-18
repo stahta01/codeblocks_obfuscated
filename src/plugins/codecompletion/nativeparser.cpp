@@ -614,16 +614,23 @@ bool NativeParser::DeleteParser(cbProject* project)
     if (m_ParserPerWorkspace)
         removeProjectFromParser = RemoveProjectFromParser(project);
 
-    if (m_ParsedProjects.empty())
+    if (m_ParsedProjects.empty()) // this indicates we are in one parser per one project mode
     {
-        if (it->second == m_Parser)
-          SetParser(m_TempParser); // Also updates class browser
-
         wxString log(F(_("NativeParser::DeleteParser(): Deleting parser for project '%s'!"), prj.wx_str()));
         CCLogger::Get()->Log(log);
         CCLogger::Get()->DebugLog(log);
 
+        // the logic here is : firstly delete the parser instance, then see whether we need an
+        // active parser switch (call SetParser())
         delete it->second;
+
+        // if the active parser is deleted, set the active parser to nullptr
+        if (it->second == m_Parser)
+        {
+            m_Parser = nullptr;
+            SetParser(m_TempParser); // Also updates class browser
+        }
+
         m_ParserList.erase(it);
 
         return true;
@@ -1116,11 +1123,19 @@ bool NativeParser::SwitchParser(cbProject* project, ParserBase* parser)
 
 void NativeParser::SetParser(ParserBase* parser)
 {
+    // the active parser is the same as the old active parser, nothing need to be done
     if (m_Parser == parser)
         return;
 
-    RemoveLastFunctionChildren(m_Parser->GetTokenTree(), m_LastFuncTokenIdx);
+    // a new parser is active, so remove the old parser's local variable tokens.
+    // if m_Parser == nullptr, this means the active parser is already deleted.
+    if (m_Parser)
+        RemoveLastFunctionChildren(m_Parser->GetTokenTree(), m_LastFuncTokenIdx);
+
+    // refresh code completion related variables
     InitCCSearchVariables();
+
+    // switch the active parser
     m_Parser = parser;
 
     if (m_ClassBrowser)
@@ -1748,7 +1763,9 @@ bool NativeParser::ParseLocalBlock(ccSearchData* searchData, TokenIdxSet& search
 
         CC_LOCKER_TRACK_TT_MTX_UNLOCK(s_TokenTreeMutex)
 
-        if (!parent)
+        // only need to parse the function body, other type of Tokens' body such as class declaration
+        // should not be parsed.
+        if (!parent || !(parent->m_TokenKind & tkAnyFunction))
             return false;
     }
 
@@ -2235,6 +2252,18 @@ bool NativeParser::AddProjectDefinedMacros(cbProject* project, ParserBase* parse
         wxArrayString targetOpts = target->GetCompilerOptions();
         for (size_t i = 0; i < targetOpts.GetCount(); ++i)
             opts.Add(targetOpts[i]);
+    }
+    // In case of virtual targets, collect the defines from all child targets.
+    wxArrayString targets = project->GetExpandedVirtualBuildTargetGroup(project->GetActiveBuildTarget());
+    for (size_t i = 0; i < targets.GetCount(); ++i)
+    {
+        target = project->GetBuildTarget(targets[i]);
+        if (target != NULL)
+        {
+            wxArrayString targetOpts = target->GetCompilerOptions();
+            for (size_t j = 0; j < targetOpts.GetCount(); ++j)
+                opts.Add(targetOpts[j]);
+        }
     }
 
     for (size_t i = 0; i < opts.GetCount(); ++i)

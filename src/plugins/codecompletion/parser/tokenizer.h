@@ -88,7 +88,7 @@ struct TokenizerOptions
  * or a wxString already in memory(e.g. the scintilla text buffer). The most public interfaces are two member functions:
  * GetToken() and PeekToken().
  * The former one eats one token string from buffer, the later one does a "look ahead" on the buffer and return
- * the next token string(peeked string). The peeked string content will be buffered until the next GetToken() call,
+ * the next token string(peeked string). The peeked string will be cached until the next GetToken() call,
  * thus performance can be improved.
  * Also, Tokenizer class does some kind of handling "Macro replacement" on the buffer to imitate the macro expansion in
  * C-preprocessor, see member-function ReplaceMacro() for details.
@@ -105,12 +105,17 @@ public:
     /** Tokenizer destructor.*/
     ~Tokenizer();
 
-    /** Initialize the buffer by opening a file through a loader. */
+    /** Initialize the buffer by opening a file through a loader, this function copy the contents
+     *  from the loader's buffer to its own buffer, so after that, we can safely delete the loader
+     *  after this function call
+     */
     bool Init(const wxString& filename = wxEmptyString, LoaderBase* loader = 0);
 
-    /** Initialize the buffer by directly using a wxString reference.
-     * @param initLineNumber the start line of the buffer, usually the parser try to parse a function
-     * body, so the line information of each Token can be correct.
+    /** Initialize the buffer by directly using a wxString's content.
+     *  @param initLineNumber the start line of the buffer, usually the parser try to parse a function
+     *  body, so the line information of each local variable tokens are correct.
+     *  @param buffer text used for parsing
+     *  @param fileOfBuffer the file name where the buffer come from.
      */
     bool InitFromBuffer(const wxString& buffer, const wxString& fileOfBuffer = wxEmptyString,
                         size_t initLineNumber = 0);
@@ -163,7 +168,7 @@ public:
         return m_LineNumber;
     };
 
-    /** Return the brace "{" level.
+    /** Return the brace "{}" level.
      * the value will increase by one when we meet a "{", decrease by one when we meet a "}".
      */
     unsigned int GetNestingLevel() const
@@ -197,6 +202,7 @@ public:
      */
     wxString ReadToEOL(bool nestBraces = true, bool stripUnneeded = true);
 
+    /** read a string from '(' to ')', note that inner parentheses considered */
     void ReadParentheses(wxString& str);
 
     /** Skip from the current position to the end of line.
@@ -244,7 +250,7 @@ public:
             s_Replacements[it->first] = it->second;
     }
 
-    /** Check whether the Tokenizer reached the end of the buffer (file) */
+    /** Check whether the Tokenizer reaches the end of the buffer (file) */
     bool IsEOF() const
     {
         return m_TokenIndex >= m_BufferLen;
@@ -258,7 +264,7 @@ public:
 
     /** Backward buffer replacement for re-parsing
      *
-     * @param target the new text going to take place on the m_Buffer
+     * @param target the new text going to replace some other text on the m_Buffer
      * @param updatePeekToken do we need to update the m_PeekToken after the replacement?
      *
      * http://forums.codeblocks.org/index.php/topic,13384.msg90391.html#msg90391
@@ -267,20 +273,22 @@ public:
      *
      * xxxxxxxxxAAAA(u,v)yyyyyyyyy
      *          ^---m_TokenIndex
-     * For example, the above is a wxChar Array m_Buffer, then "AAAA(u,v)" need to do a Macro
-     * expansion to some other text. So, we just do a "backward" text replace, so that, after
-     * replacement, The last replacement char was ")" in "AAAA(u,v)" (We say it as an entry point),
-     * so the text becomes:
+     *
+     * For example, the above is a wxChar Array(m_Buffer), a macro expansion is needed to replace
+     * "AAAA(u,v)" to some new text. We just do a "backward" text replace here. After the
+     * replacement, The last replacement char was ")" in "AAAA(u,v)" (We say it as an anchor point),
+     * so the new buffer becomes:
      *
      * xxxNNNNNNNNNNNNNNNyyyyyyyyy
      *    ^---m_TokenIndex
-     * Note that "NNNNNNNNNNNN" is some macro expansion text. then the m_TokenIndex was moved
-     * backward to the beginning of the text.
-     * if the macro expansion result text is small enough, then m_Buffer's length do not need to
-     * change.
-     * The situation when our m_Buffer's length need to be change is that the macro expansion text
-     * is too long, so the buffer before "entry point" can not hold the new text, this way,
+     *
+     * Note that "NNNNNNNNNNNN" is the new text. The m_TokenIndex was moved backward to the
+     * beginning of the text.
+     * if the new text is small enough, then m_Buffer's length do not need to increase.
+     * The situation when our m_Buffer's length need to be increased is that the new text
+     * is too long, so the buffer before "anchor point" can not hold the new text, this way,
      * m_Buffer's length will adjusted. like below:
+     *
      * NNNNNNNNNNNNNNNNNNNNNNyyyyyyyyy
      * ^---m_TokenIndex
      */
@@ -424,7 +432,17 @@ private:
         return last == _T('\\');
     }
 
-    /** Do the Macro replacement according to the macro replacement rules */
+    /** Do the Macro replacement according to the macro replacement rules, generally we have two
+     *  kinds of macro replacements. One is the user defined macro replacement rules, which is
+     *  hold by static member variable s_Replacements, you can let the tokenizer directly return
+     *  a "BBB" string if the origin token is"AAA" , but you have a "AAA" -> "BBB" rule. Another
+     *  kind of macro replacement is that the tokenizer try to look up the token tree to see
+     *  whether a token is a macro definition, if yes, it can expand the macro. The first kind of
+     *  macro replacement happens every time when a tokenizer try to return a token, it is very fast
+     *  as s_Replacements is a hash table, and have very limited entries, on the other side, looking
+     *  up a token in the token tree takes more time, the later case only happens in some special
+     *  cases, such has we are handling #if directives.
+     */
     void ReplaceMacro(wxString& str);
 
     /** Judge what is the first block
@@ -484,13 +502,12 @@ private:
     /** when parsing a buffer
      * ....... namespace std { int a; .......
      *                      ^ --- m_TokenIndex, m_Token = "std"
-     * m_TokenIndex is always point to the next character of a valid token, in the above example,
-     * it is the space after "std".
+     * m_TokenIndex always points to the next character of a valid token, in the above example,
+     * it points to the space after "std".
      */
     unsigned int         m_TokenIndex;           //!< index offset in buffer
     unsigned int         m_LineNumber;           //!< line offset in buffer
     unsigned int         m_NestLevel;            //!< keep track of block nesting { }
-    unsigned int         m_SavedNestingLevel;
 
     /** Backup the previous Token information */
     unsigned int         m_UndoTokenIndex;
@@ -504,6 +521,14 @@ private:
     unsigned int         m_PeekLineNumber;
     unsigned int         m_PeekNestLevel;
 
+    /** Saved token info (for PeekToken()), m_TokenIndex will be moved forward or backward when
+     *  either DoGetToken() or SkipUnwanted() is called, so we should save m_TokenIndex before it
+     *  get modified.
+     */
+    unsigned int         m_SavedTokenIndex;
+    unsigned int         m_SavedLineNumber;
+    unsigned int         m_SavedNestingLevel;
+
     /** bool variable specifies whether the buffer is ready for parsing */
     bool                 m_IsOK;
     /** Tokeniser state specifies the skipping option */
@@ -516,14 +541,18 @@ private:
 
 
     /** Save the remaining length from m_TokenIndex to the end of m_Buffer before replace m_Buffer.
+     *
      *  ..........AAA..................
      *               ^                 [EOF]
-     * It is the length between '^'(m_TokenIndex) and [EOF], sometimes there is not enough space
+     *
+     * It is the length between '^'(m_TokenIndex) and [EOF], sometimes there are not enough spaces
      * to put the substitute before TokenIndex, so the m_Buffer will grows after the replacement:
+     *
      *  BBBBBBBBBBBBBBBBBBBBBBBBB..................
      *  ^                        !                 [EOF]
+     *
      * Here, m_TokenIndex is moved backward to the beginning of the new substitute
-     * string, but the length between '!' and [EOF] should be unchanged
+     * string, but the length between '!' and [EOF] should not be changed.
      */
     size_t               m_FirstRemainingLength;
 
@@ -532,7 +561,7 @@ private:
      */
     size_t               m_RepeatReplaceCount;
 
-    /** Static member, this is a hash map storing all macro replacement rules */
+    /** Static member, this is a hash map storing all user defined macro replacement rules */
     static wxStringHashMap s_Replacements;
 
     wxString             m_NextTokenDoc;

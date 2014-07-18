@@ -6,16 +6,6 @@
 #ifndef WIZ_H
 #define WIZ_H
 
-// For compilers that support precompilation, includes <wx/wx.h>
-#include <wx/wxprec.h>
-
-#ifdef __BORLANDC__
-	#pragma hdrstop
-#endif
-
-#ifndef WX_PRECOMP
-	#include <wx/wx.h>
-#endif
 
 #include <cbplugin.h> // the base class we 're inheriting
 #include <settings.h> // needed to use the Code::Blocks SDK
@@ -89,10 +79,15 @@ class Wiz : public cbWizardPlugin
 
         void FillComboboxWithCompilers(const wxString& name);
         wxString GetCompilerFromCombobox(const wxString& name);
+        void FillContainerWithCompilers(const wxString& name, const wxString& compilerID,
+                                        const wxString& validCompilerIDs);
 
         wxString GetComboboxStringSelection(const wxString& name);
         int GetComboboxSelection(const wxString& name);
         void SetComboboxSelection(const wxString& name, int sel);
+
+        void SetComboboxValue(const wxString& name, const wxString& value);
+        wxString GetComboboxValue(const wxString& name);
 
         int GetRadioboxSelection(const wxString& name);
         void SetRadioboxSelection(const wxString& name, int sel);

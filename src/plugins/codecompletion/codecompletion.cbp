@@ -33,6 +33,7 @@
 				<Option compiler="gcc" />
 				<Option projectLinkerOptionsRelation="2" />
 				<Compiler>
+					<Add option="-DCC_PARSER_TEST" />
 					<Add directory="cctest" />
 					<Add directory="parser" />
 					<Add directory="." />
@@ -138,12 +139,6 @@
 			<Option target="Code-completion" />
 		</Unit>
 		<Unit filename="classbrowserbuilderthread.h">
-			<Option target="Code-completion" />
-		</Unit>
-		<Unit filename="classbrowserbuildtreeevent.cpp">
-			<Option target="Code-completion" />
-		</Unit>
-		<Unit filename="classbrowserbuildtreeevent.h">
 			<Option target="Code-completion" />
 		</Unit>
 		<Unit filename="codecompletion.cpp">

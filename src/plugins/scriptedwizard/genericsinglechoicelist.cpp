@@ -7,11 +7,17 @@
  * $HeadURL$
  */
 
+#include <sdk.h>
+#ifndef CB_PRECOMP
+    #include <wx/arrstr.h>
+    //(*InternalHeadersPCH(GenericSingleChoiceList)
+    #include <wx/intl.h>
+    #include <wx/string.h>
+    //*)
+#endif // CB_PRECOMP
+
 #include "genericsinglechoicelist.h"
 
-#include <wx/arrstr.h>
-#include <wx/intl.h>
-#include <wx/string.h>
 
 //(*IdInit(GenericSingleChoiceList)
 const long GenericSingleChoiceList::ID_STATICTEXT1 = wxNewId();
@@ -56,5 +62,9 @@ void GenericSingleChoiceList::SetChoices(const wxArrayString& choices, int defCh
     {
         GenericChoiceList->Append(choices[i]);
     }
-    GenericChoiceList->SetSelection(defChoice);
+
+    if (static_cast<size_t>(defChoice) < choices.GetCount())
+        GenericChoiceList->SetSelection(defChoice);
+    else if (choices.GetCount() > 0)
+        GenericChoiceList->SetSelection(0);
 }
