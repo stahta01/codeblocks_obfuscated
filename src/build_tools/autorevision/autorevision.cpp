@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <cstdio>
 #include <cstring>
@@ -161,15 +162,15 @@ int main(int argc, char** argv)
     
     if( is_debugged )
     {
-        std::cout << "You may notice I'm little bit more verbose than ussual - hey You asked for it." << std::endl;
+        std::cout << "You may notice I'm little bit more verbose than usual - hey You asked for it." << std::endl;
     
-        std::cout << "Revision number (and date) as:\n"
+        std::cout << "I should output Revision number (and date) as:\n"
                     << "        const unsigned int    " << ( do_int ? "yes" : "no" ) << '\n'
                     << "        std::string           " << ( do_std ? "yes" : "no" ) << '\n'
                     << "        wxString              " << ( do_wx  ? "yes" : "no" ) << '\n'
                   << "Will use Unicode translation macros for strings:\n"
                     << "                              " << ( do_translate ? "yes" : "no" ) << '\n'
-                  << "Skip git-svn?\n"
+                  << "Should I skip git-svn?\n"
                     << "                              " << ( skip_git_svn ? "yes" : "no" ) << '\n'
                   << std::endl;
         
@@ -230,8 +231,8 @@ int main(int argc, char** argv)
     if( !success )
     {
         std::cout << "Error: Could not output revision number to the header file... "
-                    << "If you depend on this file, your build will probably fail. Sorry. "
-                    << ( be_verbose ? "Try adding -v to command line to get verbose output." : "" )
+                    << "If you depend on this file, your build will probably fail. Sorry.\n"
+                    << "Try adding -v or --debug to command line options to get verbose output."
                     << std::endl;
         return EXIT_FAILURE;
     }
@@ -684,55 +685,72 @@ bool QuerySvn(const std::string& workingDir, std::string& revision, std::string 
 
 bool WriteOutput(const std::string& outputFile, std::string& revision, std::string& date)
 {
-    std::string old;
-    std::string comment("/*");
-    comment.append(revision);
-    comment.append("*/");
-    /* We should not rely only on revision number, user might want to output different
-        types but revision stay same, so those types won't be written to the file...
+    
+    // Create a string we can quickly use to compare if we already
+    //  have all the required information in the header file since
+    //  last time. Generate new header file only if requirements
+    //  or revision number changes.
+    // - We do this check to save compilation time, since if we
+    //  rewrite the header even with the exact text, compiler will
+    //  still think it has changed and it will require recompilation.
+    std::stringstream ssWouldBeCurrentVersionTag;
+    ssWouldBeCurrentVersionTag << "/* " 
+                                << "revision:" << revision << ";"
+                                << "date:" << date << ";" // is revision date, not file date
+                                << std::boolalpha
+                                << "do_int:" << do_int << ";"
+                                << "do_std:" << do_std << ";"
+                                << "do_translate:" << do_translate << ";"
+                                << "do_wx:" << do_wx
+                                << " */";
     {
-        std::ifstream in(outputFile.c_str());
+        std::string oldVersionTag;
+        
+        std::ifstream in(outputFile);
         if( in.is_open() )
         {
-            in >> old;
-            if(old >= comment)
+            std::getline( in, oldVersionTag );
+            
+            if( oldVersionTag.compare( ssWouldBeCurrentVersionTag.str() ) == 0 )
             {
                 if(be_verbose)
                     std::cout << "Revision unchanged - " << revision << ". Nothing to do here..." << std::endl;
                 in.close();
-                return false;
+                return true;
             }
         }
     }
-    */
     
-    FILE *header = fopen(outputFile.c_str(), "wb");
-    if(!header)
+    
+    
+    std::ofstream ofsHeaderFile(outputFile);
+    if( !ofsHeaderFile.is_open() )
     {
-        std::cout << "Error: Could not open " << outputFile << " for writting..." << std::endl;
+        std::cout << "Error: Could not open " << outputFile << " for writing..." << std::endl;
         return false;
     }
     
-    if( be_verbose )
-        std::cout << "Outputting revision info to " << outputFile << "... ";
+    ofsHeaderFile << ssWouldBeCurrentVersionTag.str() << std::endl;
+    ofsHeaderFile << "// Don't include this header, only configmanager-revision.cpp should do this.\n"
+                << "#ifndef AUTOREVISION_H\n"
+                << "#define AUTOREVISION_H\n"
+                << "\n"
+                << std::endl;
     
-    fprintf(header, "%s\n", comment.c_str());
-    fprintf(header, "//don't include this header, only configmanager-revision.cpp should do this.\n");
-    fprintf(header, "#ifndef AUTOREVISION_H\n");
-    fprintf(header, "#define AUTOREVISION_H\n\n\n");
+    if( do_std )
+        ofsHeaderFile << "#include <string>\n";
+    if( do_wx )
+        ofsHeaderFile << "#include <wx/string.h>\n";
     
-    if(do_std)
-        fprintf(header, "#include <string>\n");
-    if(do_wx)
-        fprintf(header, "#include <wx/string.h>\n");
+    if( do_int || do_std || do_wx )
+        ofsHeaderFile << "\n"
+            << "namespace autorevision\n"
+            << "{\n";
     
-    if(do_int || do_std || do_wx)
-        fprintf(header, "\nnamespace autorevision\n{\n");
+    if( do_int )
+        ofsHeaderFile << "\tconst unsigned int svn_revision = " << revision << ";\n";
     
-    if(do_int)
-        fprintf(header, "\tconst unsigned int svn_revision = %s;\n", revision.c_str());
-    
-    if(do_translate)
+    if( do_translate )
     {
         revision = "_T(\"" + revision + "\")";
         date = "_T(\"" + date + "\")";
@@ -743,21 +761,22 @@ bool WriteOutput(const std::string& outputFile, std::string& revision, std::stri
         date = "\"" + date + "\"";
     }
     
-    if(do_std)
-        fprintf(header, "\tconst std::string svn_revision_s(%s);\n", revision.c_str());
-    if(do_wx)
-        fprintf(header, "\tconst wxString svnRevision(%s);\n", revision.c_str());
+    if( do_std )
+        ofsHeaderFile << "\t const std::string svn_revision_s(" << revision << ");\n";
+    if( do_wx )
+        ofsHeaderFile << "\tconst wxString svnRevision(" << revision << ");\n";
     
-    if(do_std)
-        fprintf(header, "\tconst std::string svn_date_s(%s);\n", date.c_str());
-    if(do_wx)
-        fprintf(header, "\tconst wxString svnDate(%s);\n", date.c_str());
+    if( do_std )
+        ofsHeaderFile << "\tconst std::string svn_date_s(" << revision << ");\n";
+    if( do_wx )
+        ofsHeaderFile << "\tconst wxString svnDate(" << date << ");\n";
     
-    if(do_int || do_std || do_wx)
-        fprintf(header, "}\n\n");
+    if( do_int || do_std || do_wx )
+        ofsHeaderFile << "}\n\n";
     
-    fprintf(header, "\n\n#endif // AUTOREVISION_H\n");
-    fclose(header);
+    ofsHeaderFile << "\n\n" << "#endif // AUTOREVISION_H\n";
+    
+    ofsHeaderFile.close();
     
     if( be_verbose )
         std::cout << "Done" << std::endl;
