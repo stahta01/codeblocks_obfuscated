@@ -12,8 +12,8 @@
 #ifndef CB_PRECOMP
     #include <configurationpanel.h>
     #include <cbstyledtextctrl.h>
-    #include <editorcolourset.h>
 #endif
+#include <editorcolourset.h>
 
 #include "abbreviations.h"
 #include "abbreviationsconfigpanel.h"
