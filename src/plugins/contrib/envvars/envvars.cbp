@@ -54,7 +54,6 @@
 			<Add directory="..\..\..\include\scripting\include" />
 			<Add directory="..\..\..\include\scripting\sqplus" />
 			<Add directory="..\..\..\include\scripting\bindings" />
-			<Add directory="..\..\..\sdk\wxscintilla\include" />
 			<Add directory="$(#WX.INCLUDE)" />
 			<Add directory="$(#WX.lib)\gcc_dll$(WX_CFG)\msw$(WX_SUFFIX)" />
 		</Compiler>

@@ -46,7 +46,6 @@
 			<Add option="-DwxUSE_UNICODE" />
 			<Add option="-DBUILDING_PLUGIN" />
 			<Add directory="..\..\..\include" />
-			<Add directory="..\..\..\sdk\wxscintilla\include" />
 			<Add directory="..\..\..\include\mozilla_chardet" />
 			<Add directory="..\..\..\include\mozilla_chardet\mfbt" />
 			<Add directory="..\..\..\include\mozilla_chardet\nsprpub\pr\include" />
