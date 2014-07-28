@@ -20,11 +20,10 @@
 
 #include <sdk.h> // Code::Blocks SDK
 #ifndef CB_PRECOMP
-    #include <wx/wxscintilla.h>
-
     #include <configmanager.h>
     #include <logmanager.h>
 #endif
+#include <wx/wxscintilla.h>
 
 #include "SpellCheckerPlugin.h"
 

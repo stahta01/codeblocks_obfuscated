@@ -27,11 +27,9 @@
     #include <wx/toolbar.h>
     #include <wx/utils.h>
     #include <wx/xrc/xmlres.h>
-    #include <wx/wxscintilla.h>
 
     #include <cbeditor.h>
     #include <configmanager.h>
-    #include <editorcolourset.h>
     #include <editormanager.h>
     #include <globals.h>
     #include <logmanager.h>
@@ -40,6 +38,8 @@
     #include <projectmanager.h>
     #include <sdk_events.h>
 #endif
+#include <wx/wxscintilla.h>
+#include <editorcolourset.h>
 
 #include <wx/tokenzr.h>
 #include <wx/html/htmlwin.h>

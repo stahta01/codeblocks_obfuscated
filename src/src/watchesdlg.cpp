@@ -10,7 +10,6 @@
 #include "sdk.h"
 #ifndef CB_PRECOMP
     #include <wx/app.h>
-    #include <wx/dnd.h>
     #include <wx/fontutil.h>
     #include <wx/menu.h>
     #include <wx/settings.h>
@@ -21,6 +20,7 @@
     #include "logmanager.h"
     #include "scrollingdialog.h"
 #endif
+#include <wx/dnd.h>
 
 #include <numeric>
 #include <map>

@@ -13,7 +13,6 @@
     #include "cbproject.h"
     #include "compilerfactory.h"
     #include "editormanager.h"
-    #include "editorcolourset.h"
     #include "logmanager.h"
     #include "projectmanager.h"
     #include <wx/xrc/xmlres.h>
@@ -28,6 +27,7 @@
     #include <wx/stattext.h>
     #include <wx/sizer.h>
 #endif
+#include "editorcolourset.h"
 
 #ifdef __WXMSW__
 // TODO: equivalent??? -> #include <errno.h>

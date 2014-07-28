@@ -24,7 +24,6 @@
     #include "cbproject.h"
     #include "configmanager.h"
     #include "debuggermanager.h"
-    #include "editorcolourset.h"
     #include "editormanager.h"
     #include "globals.h"
     #include "infowindow.h"
@@ -39,6 +38,7 @@
 #endif
 #include "cbstyledtextctrl.h"
 #include "cbcolourmanager.h"
+#include "editorcolourset.h"
 
 #include <wx/fontutil.h>
 #include <wx/splitter.h>

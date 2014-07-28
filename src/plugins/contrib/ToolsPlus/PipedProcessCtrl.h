@@ -11,9 +11,8 @@
 #include <wx/aui/aui.h>
 
 #include <sdk.h>
-#ifndef CB_PRECOMP
-    #include <wx/wxscintilla.h>
-#endif
+#include <wx/wxscintilla.h>
+
 #include "ShellCtrlBase.h"
 
 class PipedProcessCtrl;
