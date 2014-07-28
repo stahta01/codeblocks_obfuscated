@@ -1,0 +1,3 @@
+[submodule "src/plugins/ClangLib"]
+	path = src/plugins/ClangLib
+	url = https://github.com/EnterTheNameHere/ClangLib_enth.git
