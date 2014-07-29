@@ -16,8 +16,10 @@
 		<Project filename="plugins/contrib/dragscroll/dragscroll.cbp" />
 		<Project filename="plugins/contrib/EditorConfig/EditorConfig.cbp" />
 		<Project filename="plugins/contrib/EditorTweaks/EditorTweaks.cbp" />
+		<Project filename="plugins/contrib/envvars/envvars.cbp" />
 		<Project filename="plugins/contrib/FileManager/FileManager.cbp" />
 		<Project filename="plugins/contrib/headerfixup/headerfixup.cbp" />
+		<Project filename="plugins/contrib/help_plugin/help-plugin.cbp" />
 		<Project filename="plugins/contrib/HexEditor/HexEditor.cbp" />
 		<Project filename="plugins/contrib/IncrementalSearch/IncrementalSearch.cbp" />
 		<Project filename="plugins/contrib/keybinder/keybinder.cbp" />
@@ -29,5 +31,6 @@
 		<Project filename="plugins/contrib/rndgen/rndgen.cbp" />
 		<Project filename="plugins/contrib/SmartIndent/SmartIndent.cbp" />
 		<Project filename="plugins/contrib/symtab/symtab.cbp" />
+		<Project filename="plugins/contrib/ToolsPlus/ToolsPlus.cbp" />
 	</Workspace>
 </CodeBlocks_workspace_file>
