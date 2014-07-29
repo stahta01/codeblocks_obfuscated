@@ -1,0 +1,2 @@
+These wxconfig files are from the CodeLite IDE Project.
+http://codelite.org/Developers/Windows
