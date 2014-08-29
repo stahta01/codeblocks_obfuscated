@@ -1053,12 +1053,13 @@ cbWizardPlugin::cbWizardPlugin()
 
 cbSmartIndentPlugin::cbSmartIndentPlugin()
 {
-    m_Type = ptOther;
+    m_Type = ptSmartIndent;
 }
 
 void cbSmartIndentPlugin::OnAttach()
 {
     m_FunctorId = EditorHooks::RegisterHook( new EditorHooks::cbSmartIndentEditorHookFunctor(this) );
+    Manager::Get()->RegisterEventSink(cbEVT_EDITOR_CC_DONE, new cbEventFunctor<cbSmartIndentPlugin, CodeBlocksEvent>(this, &cbSmartIndentPlugin::OnCCDoneEvent));
 }
 
 void cbSmartIndentPlugin::OnRelease(cb_unused bool appShutDown)
@@ -1356,4 +1357,13 @@ wxChar cbSmartIndentPlugin::GetNextNonWhitespaceCharOfLine(cbStyledTextCtrl* stc
     }
 
     return 0;
+}
+void cbSmartIndentPlugin::OnCCDoneEvent(CodeBlocksEvent& event)
+{
+    EditorBase *eb = event.GetEditor();
+    if (eb && eb->IsBuiltinEditor())
+    {
+        cbEditor *ed = static_cast<cbEditor *>(eb);
+        OnCCDone(ed);
+    }
 }

@@ -740,6 +740,7 @@ void CCManager::OnEditorHook(cbEditor* ed, wxScintillaEvent& event)
             {
                 ccPlugin->DoAutocomplete(event.GetText(), ed);
             }
+            CallSmartIndentCCDone(ed);
         }
     }
     else if (evtType == wxEVT_SCI_AUTOCOMP_CANCELLED)
@@ -1200,4 +1201,12 @@ void CCManager::DoShowTips(const wxStringVec& tips, cbStyledTextCtrl* stc, int p
     if (hlStart >= 0 && hlEnd > hlStart)
         stc->CallTipSetHighlight(hlStart, hlEnd);
     m_LastTipPos = pos;
+}
+
+void CCManager::CallSmartIndentCCDone(cbEditor* ed)
+{
+    CodeBlocksEvent event(cbEVT_EDITOR_CC_DONE);
+    event.SetEditor(ed);
+    // post event in the host's event queue
+    Manager::Get()->ProcessEvent(event);
 }
