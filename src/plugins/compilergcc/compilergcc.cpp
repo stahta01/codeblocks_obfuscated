@@ -71,6 +71,7 @@
 #include "compilerGNUFortran.h"
 #include "compilerG95.h"
 #include "compilerXML.h"
+#include "CompilerGNUMake.h"
 
 #include <scripting/bindings/sc_base_types.h>
 
@@ -863,6 +864,7 @@ void CompilerGCC::DoRegisterCompilers()
 
     // register built-in compilers
     CompilerFactory::RegisterCompiler(new CompilerMINGW);
+    CompilerFactory::RegisterCompiler(new CompilerGNUMake);
     if (platform::windows || nonPlatComp)
     {
         CompilerFactory::RegisterCompiler(new CompilerMSVC);
