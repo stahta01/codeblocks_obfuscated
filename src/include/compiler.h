@@ -297,6 +297,8 @@ class DLLIMPORT Compiler : public CompileOptionsBase
         virtual const wxArrayString& GetExtraPaths() const  { return m_ExtraPaths; }
         /** @brief Get the compiler's programs */
         virtual const CompilerPrograms& GetPrograms() const { return m_Programs; }
+        /** @brief Get the compiler's primary program */
+        virtual const wxString& GetPrimaryProgram() const { return m_Programs.C; }
         /** @brief Get the compiler's generic switches */
         virtual const CompilerSwitches& GetSwitches() const { return m_Switches; }
         /** @brief Get the compiler's options */

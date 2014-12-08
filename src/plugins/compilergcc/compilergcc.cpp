@@ -725,8 +725,8 @@ void CompilerGCC::SetupEnvironment()
     const wxString pathSep  = wxFileName::GetPathSeparator(); // "\" or "/"
     const bool     caseSens = !(platform::windows);
 
-    wxString      cApp       = compiler->GetPrograms().C;
-    Manager::Get()->GetMacrosManager()->ReplaceMacros(cApp);
+    wxString      priApp       = compiler->GetPrimaryProgram();
+    Manager::Get()->GetMacrosManager()->ReplaceMacros(priApp);
     wxArrayString extraPaths = compiler->GetExtraPaths();
     wxString      extraPathsBinPath(wxEmptyString);
 
@@ -755,9 +755,9 @@ void CompilerGCC::SetupEnvironment()
             extraPath.RemoveLast();
         if (!extraPath.Trim().IsEmpty())
         {
-            // Remember, if we found the C application in the extra path's:
+            // Remember, if we found the primary application in the extra path's:
             if (   extraPathsBinPath.IsEmpty()
-                && wxFileExists(extraPath + pathSep + cApp ) )
+                && wxFileExists(extraPath + pathSep + priApp ) )
                 extraPathsBinPath = extraPath;
             pathList.Add(extraPath);
         }
@@ -768,17 +768,17 @@ void CompilerGCC::SetupEnvironment()
     pathArray.AddEnvList(_T("PATH"));
     pathList.Add(pathArray);
 
-    // Try to locate the path to the C compiler:
-    wxString binPath = pathList.FindAbsoluteValidPath(cApp);
+    // Try to locate the path to the primary application:
+    wxString binPath = pathList.FindAbsoluteValidPath(priApp);
 
     // It seems, under Win32, the above command doesn't search in paths with spaces...
     // Look directly for the file in question in masterPath if it is not already found.
     if (    binPath.IsEmpty()
         || (pathList.Index(wxPathOnly(binPath), caseSens)==wxNOT_FOUND) )
     {
-        if      (wxFileExists(masterPath + pathSep + _T("bin") + pathSep + cApp))
+        if      (wxFileExists(masterPath + pathSep + _T("bin") + pathSep + priApp))
             binPath = masterPath + pathSep + _T("bin");
-        else if (wxFileExists(masterPath + pathSep + cApp))
+        else if (wxFileExists(masterPath + pathSep + priApp))
             binPath = masterPath;
         else if (!extraPathsBinPath.IsEmpty())
             binPath = extraPathsBinPath;
