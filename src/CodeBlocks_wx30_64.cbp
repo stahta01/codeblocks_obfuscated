@@ -87,6 +87,7 @@
 				<Option type="2" />
 				<Option compiler="gcc" />
 				<Compiler>
+					<Add option="-std=c++11" />
 					<Add option="-D__WX__" />
 					<Add option="-DWINVER=0x0501" />
 					<Add option="-DLINK_LEXERS" />
@@ -119,6 +120,7 @@
 				<Option projectLinkerOptionsRelation="2" />
 				<Compiler>
 					<Add option="-Woverloaded-virtual" />
+					<Add option="-std=c++11" />
 					<Add option="-DEXPORT_LIB" />
 					<Add option="-DEXPORT_EVENTS" />
 					<Add option="-DWXMAKINGDLL_SCI" />
@@ -700,6 +702,7 @@
 			</Target>
 			<Environment>
 				<Variable name="WX_CFG" value="" />
+				<Variable name="WX_COMPILER" value="gcc481TDM_x64" />
 				<Variable name="WX_SUFFIX" value="u" />
 				<Variable name="WX_VERSION" value="30" />
 			</Environment>
@@ -726,7 +729,7 @@
 			<Add option="-DwxUSE_UNICODE" />
 			<Add option="-D_WIN64" />
 			<Add directory="$(#WX30_64.include)" />
-			<Add directory="$(#WX30_64.lib)/gcc_dll$(WX_CFG)/msw$(WX_SUFFIX)" />
+			<Add directory="$(#WX30_64.lib)/$(WX_COMPILER)_dll$(WX_CFG)/msw$(WX_SUFFIX)" />
 			<Add directory="sdk/wxscintilla/include" />
 			<Add directory="include/tinyxml" />
 		</Compiler>
@@ -735,9 +738,10 @@
 			<Add directory="$(#WX30_64)/lib/gcc_dll$(WX_CFG)/msw$(WX_SUFFIX)" />
 		</ResourceCompiler>
 		<Linker>
-			<Add library="wxmsw$(WX_VERSION)$(WX_SUFFIX)" />
+			<Add library="wxbase$(WX_VERSION)$(WX_SUFFIX)" />
+			<Add library="wxmsw$(WX_VERSION)$(WX_SUFFIX)_core" />
 			<Add directory="base/tinyxml" />
-			<Add directory="$(#WX30_64.lib)/gcc_dll$(WX_CFG)" />
+			<Add directory="$(#WX30_64.lib)/$(WX_COMPILER)_dll$(WX_CFG)" />
 		</Linker>
 		<Unit filename="base/tinyxml/tinystr.cpp">
 			<Option target="tinyXML" />
