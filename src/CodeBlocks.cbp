@@ -703,6 +703,7 @@
 			</Target>
 			<Environment>
 				<Variable name="WX_CFG" value="" />
+				<Variable name="WX_COMPILER" value="gcc" />
 				<Variable name="WX_SUFFIX" value="u" />
 				<Variable name="WX_VERSION" value="28" />
 			</Environment>
@@ -730,19 +731,19 @@
 			<Add option="-DWX_PRECOMP" />
 			<Add option="-DwxUSE_UNICODE" />
 			<Add directory="$(#WX.include)" />
-			<Add directory="$(#WX.lib)/gcc_dll$(WX_CFG)/msw$(WX_SUFFIX)" />
+			<Add directory="$(#WX.lib)/$(WX_COMPILER)_dll$(WX_CFG)/msw$(WX_SUFFIX)" />
 			<Add directory="sdk/wxscintilla/include" />
 			<Add directory="sdk/wxpropgrid/include" />
 			<Add directory="include/tinyxml" />
 		</Compiler>
 		<ResourceCompiler>
 			<Add directory="$(#WX.include)" />
-			<Add directory="$(#WX)/lib/gcc_dll$(WX_CFG)/msw$(WX_SUFFIX)" />
+			<Add directory="$(#WX)/lib/$(WX_COMPILER)_dll$(WX_CFG)/msw$(WX_SUFFIX)" />
 		</ResourceCompiler>
 		<Linker>
 			<Add library="wxmsw$(WX_VERSION)$(WX_SUFFIX)" />
 			<Add directory="base/tinyxml" />
-			<Add directory="$(#WX.lib)/gcc_dll$(WX_CFG)" />
+			<Add directory="$(#WX.lib)/$(WX_COMPILER)_dll$(WX_CFG)" />
 		</Linker>
 		<Unit filename="base/tinyxml/tinystr.cpp">
 			<Option target="tinyXML" />
