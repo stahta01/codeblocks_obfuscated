@@ -9,6 +9,7 @@ GlutPathDefault    <- _T("$(#glut)");
 GlutPathDefaultInc <- _T("$(#glut.include)");
 GlutPathDefaultLib <- _T("$(#glut.lib)");
 GlutPath <- _T("");
+GlutWinLib <- _T("glut32");
 
 function BeginWizard()
 {
@@ -60,7 +61,13 @@ function OnLeave_GlutPath(fwd)
 
         if (PLATFORM == PLATFORM_MSW)
         {
-            if (!VerifyLibFile(dir_nomacro_lib, _T("glut32"), _T("GLUT's"))) return false;
+            if (!SilentVerifyLibFile(dir_nomacro_lib, GlutWinLib))
+            {
+                if (VerifyLibFile(dir_nomacro_lib, _T("freeglut"), _T("GLUT's")))
+                    GlutWinLib = _T("freeglut")
+                else
+                    return false;
+            }
         }
         else
         {
@@ -110,7 +117,7 @@ function SetupProject(project)
     // add link libraries
     if (PLATFORM == PLATFORM_MSW)
     {
-        project.AddLinkLib(_T("glut32"));
+        project.AddLinkLib(GlutWinLib);
         project.AddLinkLib(_T("opengl32"));
         project.AddLinkLib(_T("glu32"));
         project.AddLinkLib(_T("winmm"));
