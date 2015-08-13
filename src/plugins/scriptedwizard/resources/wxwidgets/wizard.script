@@ -11,6 +11,7 @@ WxPathDefaultInc <- _T("$(") + WxGVarDefault + _T(".include)");
 WxPathDefaultLib <- _T("$(") + WxGVarDefault + _T(".lib)");
 Wx3xGVarDefault <- _T("#wx") + _T("30");
 Wx3xPathDefault <- _T("$(") + Wx3xGVarDefault + _T(")");
+Wx3xPathDefaultInc <- _T("$(") + Wx3xGVarDefault + _T(".include)");
 Wx3xPathDefaultLib <- _T("$(") + Wx3xGVarDefault + _T(".lib)");
 WizType <- wizProject;
 WxPath <- _T("");
@@ -222,12 +223,19 @@ function OnLeave_WxPath(fwd)
     {
         local dir         = Wizard.GetTextControlValue(_T("txtFolder"));
         local dir_nomacro = VerifyDirectory(dir);
+        
+        local dir_default3x_nomacro = VerifyDirectory(Wx3xPathDefault);
 
         if (dir_nomacro.IsEmpty())
             return false;
 
+        local dir_nomacro_inc;
         // verify include dependencies
-        local dir_nomacro_inc = GetCompilerIncludeDir(dir, WxPathDefault, WxPathDefaultInc);
+        if (dir_nomacro.Matches(dir_default3x_nomacro))
+            dir_nomacro_inc = GetCompilerIncludeDir(dir, Wx3xPathDefault, Wx3xPathDefaultInc);
+        else
+            dir_nomacro_inc = GetCompilerIncludeDir(dir, WxPathDefault, WxPathDefaultInc);
+
         if (dir_nomacro_inc.IsEmpty())
             return false;
         if (!VerifyFile(dir_nomacro_inc + wxFILE_SEP_PATH + _T("wx"), 
@@ -246,7 +254,6 @@ function OnLeave_WxPath(fwd)
             // not possible -> use the real inc path we had computed instead
             WxPathDefaultInc = dir_nomacro_inc;
         }
-
         WxPath = dir;
     }
     return true;
