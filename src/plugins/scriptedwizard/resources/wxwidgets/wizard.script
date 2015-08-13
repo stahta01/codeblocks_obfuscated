@@ -9,12 +9,15 @@ WxGVarDefault <- _T("#wx")
 WxPathDefault <- _T("$(") + WxGVarDefault + _T(")");
 WxPathDefaultInc <- _T("$(") + WxGVarDefault + _T(".include)");
 WxPathDefaultLib <- _T("$(") + WxGVarDefault + _T(".lib)");
-Wx3xGVarDefault <- _T("#wx") + _T("30");
+Wx3xGVarDefault <- WxGVarDefault + _T("30");
 Wx3xPathDefault <- _T("$(") + Wx3xGVarDefault + _T(")");
 Wx3xPathDefaultInc <- _T("$(") + Wx3xGVarDefault + _T(".include)");
 Wx3xPathDefaultLib <- _T("$(") + Wx3xGVarDefault + _T(".lib)");
 WizType <- wizProject;
+WxGVar <- _T("");
 WxPath <- _T("");
+WxPathInc <- _T("");
+WxPathLib <- _T("");
 WantPCH <- false;
 IsDLL <- false;
 IsMonolithic <- false;
@@ -82,7 +85,7 @@ function BeginWizard()
         Wizard.AddPage(_T("WxProjDetails"));
         Wizard.AddPage(_T("WxGuiSelect"));
         if (PLATFORM == PLATFORM_MSW)
-            Wizard.AddGenericSelectPathPage(_T("WxPath"), wxpath_msg, _T("wxWidgets' location:"), _T("$(#wx)"));
+            Wizard.AddGenericSelectPathPage(_T("WxPath"), wxpath_msg, _T("wxWidgets' location:"), WxGVarDefault);
         // we need the compiler selection before wx settings, because we 'll have
         // to validate the settings. To do this we must know the compiler beforehand...
         Wizard.AddCompilerPage(_T(""), _T("*"), true, true);
@@ -110,7 +113,7 @@ function BeginWizard()
         Wizard.AddInfoPage(_T("WxIntro"), intro_msg);
         Wizard.AddGenericSingleChoiceListPage(_T("wxVersionPage"), _T("Please select the wxWidgets version you want to use."), _T("wxWidgets 2.6.x;wxWidgets 2.8.x;wxWidgets 3.0.x"), WxVersion); // select wxwidgets version
         if (PLATFORM == PLATFORM_MSW)
-            Wizard.AddGenericSelectPathPage(_T("WxPath"), wxpath_msg, _T("wxWidgets' location:"), _T("$(#wx)"));
+            Wizard.AddGenericSelectPathPage(_T("WxPath"), wxpath_msg, _T("wxWidgets' location:"), WxGVarDefault);
         // we need the compiler selection before wx settings, because we 'll have
         // to validate the settings. To do this we must know the compiler beforehand...
         Wizard.AddBuildTargetPage(_T(""), false, true, _T(""), _T("*"), true);
@@ -223,19 +226,29 @@ function OnLeave_WxPath(fwd)
     {
         local dir         = Wizard.GetTextControlValue(_T("txtFolder"));
         local dir_nomacro = VerifyDirectory(dir);
-        
-        local dir_default3x_nomacro = VerifyDirectory(Wx3xPathDefault);
 
         if (dir_nomacro.IsEmpty())
             return false;
 
-        local dir_nomacro_inc;
-        // verify include dependencies
-        if (dir_nomacro.Matches(dir_default3x_nomacro))
-            dir_nomacro_inc = GetCompilerIncludeDir(dir, Wx3xPathDefault, Wx3xPathDefaultInc);
+        if (dir.Matches(WxPathDefault))
+        {
+            WxPath    = WxPathDefault;
+            WxPathInc = WxPathDefaultInc;
+            WxPathLib = WxPathDefaultLib;
+        } 
+        else if (dir.Matches(Wx3xPathDefault))
+        {
+            WxPath    = Wx3xPathDefault;
+            WxPathInc = Wx3xPathDefaultInc;
+            WxPathLib = Wx3xPathDefaultLib;
+        }
         else
-            dir_nomacro_inc = GetCompilerIncludeDir(dir, WxPathDefault, WxPathDefaultInc);
+        {
+            WxPath = dir; // Remember the original selection.
+        }
 
+        local dir_nomacro_inc;
+        dir_nomacro_inc = GetCompilerIncludeDir(dir, dir, WxPathInc);
         if (dir_nomacro_inc.IsEmpty())
             return false;
         if (!VerifyFile(dir_nomacro_inc + wxFILE_SEP_PATH + _T("wx"), 
@@ -243,18 +256,15 @@ function OnLeave_WxPath(fwd)
         )
             return false;
 
-        WxPath = dir; // Remember the original selection.
 
         local is_macro = _T("");
-
         // try to resolve the include directory as macro
-        is_macro = GetCompilerIncludeMacro(dir, WxPathDefault, WxPathDefaultInc);
+        is_macro = GetCompilerIncludeMacro(dir, WxPath, WxPathInc);
         if (is_macro.IsEmpty())
         {
             // not possible -> use the real inc path we had computed instead
-            WxPathDefaultInc = dir_nomacro_inc;
+            WxPathInc = dir_nomacro_inc;
         }
-        WxPath = dir;
     }
     return true;
 }
@@ -678,8 +688,8 @@ function SetupProject(project)
     }
     else
     {
-        project.AddIncludeDir(WxPathDefaultInc);
-        project.AddResourceIncludeDir(WxPathDefaultInc);
+        project.AddIncludeDir(WxPathInc);
+        project.AddResourceIncludeDir(WxPathInc);
         libdir = LibPath + _T("/msw");
         if (IsUnicode)
             libdir = libdir + _T("u");
