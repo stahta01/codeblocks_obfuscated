@@ -9,6 +9,9 @@ WxGVarDefault <- _T("#wx")
 WxPathDefault <- _T("$(") + WxGVarDefault + _T(")");
 WxPathDefaultInc <- _T("$(") + WxGVarDefault + _T(".include)");
 WxPathDefaultLib <- _T("$(") + WxGVarDefault + _T(".lib)");
+Wx3xGVarDefault <- _T("#wx") + _T("30");
+Wx3xPathDefault <- _T("$(") + Wx3xGVarDefault + _T(")");
+Wx3xPathDefaultLib <- _T("$(") + Wx3xGVarDefault + _T(".lib)");
 WizType <- wizProject;
 WxPath <- _T("");
 WantPCH <- false;
@@ -358,6 +361,13 @@ function OnLeave_WxConf(fwd)
             if ( SilentVerifyWxWinLibFile(WxPathDefaultLib, lib_wxver) )
             {
                 lib = WxPathDefaultLib;
+            }
+        }
+        else if (WxPath.Matches(Wx3xPathDefault))
+        {
+            if ( SilentVerifyWxWinLibFile(Wx3xPathDefaultLib, lib_wxver) )
+            {
+                lib = Wx3xPathDefaultLib;
             }
         }
         if (lib.IsEmpty())
