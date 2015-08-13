@@ -8,6 +8,7 @@
 WxGVarDefault <- _T("#wx")
 WxPathDefault <- _T("$(") + WxGVarDefault + _T(")");
 WxPathDefaultInc <- _T("$(") + WxGVarDefault + _T(".include)");
+WxPathDefaultLib <- _T("$(") + WxGVarDefault + _T(".lib)");
 WizType <- wizProject;
 WxPath <- _T("");
 WantPCH <- false;
@@ -310,39 +311,42 @@ function OnLeave_WxConf(fwd)
         local lib_wxver;
         local lib_unic_suffix;
         local lib_suffix;
-        local lib = WxPath + _T("/lib/");
+        local lib_postfix;
+
         if (GetCompilerFactory().CompilerInheritsFrom(Wizard.GetCompilerID(), _T("gcc*")))
         {
-            lib = lib + _T("gcc_");
+            lib_postfix = _T("gcc_");
             lib_prefix = _T("lib");
             lib_suffix = _T(".a");
         }
         else if (GetCompilerFactory().CompilerInheritsFrom(Wizard.GetCompilerID(), _T("msvc*")))
         {
-            lib = lib + _T("vc_");
+            lib_postfix = _T("vc_");
             lib_prefix = _T("");
             lib_suffix = _T(".lib");
         }
         else if (GetCompilerFactory().CompilerInheritsFrom(Wizard.GetCompilerID(), _T("bcc*")))
         {
-            lib = lib + _T("bcc_");
+            lib_postfix =_T("bcc_");
             lib_prefix = _T("");
             lib_suffix = _T(".lib");
         }
         else if (GetCompilerFactory().CompilerInheritsFrom(Wizard.GetCompilerID(), _T("ow")))
         {
-            lib = lib + _T("wat_");
+            lib_postfix = _T("wat_");
             lib_prefix = _T("");
             lib_suffix = _T(".lib");
         }
 
 
         if (IsDLL)
-            lib = lib + _T("dll");
+            lib_postfix = lib_postfix + _T("dll");
         else
-            lib = lib + _T("lib");
+            lib_postfix = lib_postfix + _T("lib");
 
-        lib = lib + Configuration;
+        local lib = WxPath + _T("/lib/");
+        
+        lib = lib + lib_postfix + Configuration;
 
         // at this point we have the full path to the link libraries
         LibPath = lib;
