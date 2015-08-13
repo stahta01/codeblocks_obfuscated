@@ -1387,3 +1387,20 @@ function SetupAddlLibs()
         LibWxExpat = (tempLibArray.Index(_T("wxExpat")) >=0);
     }
 }
+
+// verify the existence of a file of wx library in directory.
+// dir  = the directory the library is expected in
+// lib_wxver = the version number of wxWidgets as in 28, 30 or 31.
+// Returns: true, if a library exists, false otherwise
+function SilentVerifyWxWinLibFile(dir, lib_wxver)
+{
+    return (   IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxbase") + lib_wxver + _T(".a"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxmsw")  + lib_wxver + _T(".a"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxbase") + lib_wxver + _T("u.a"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxmsw")  + lib_wxver + _T("u.a"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxbase") + lib_wxver + _T("d.a"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxmsw")  + lib_wxver + _T("d.a"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxbase") + lib_wxver + _T("ud.a"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxmsw")  + lib_wxver + _T("ud.a"))
+    );
+} // function SilentVerifyWxWinLibFile
