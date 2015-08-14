@@ -223,11 +223,11 @@ function OnLeave_WxPath(fwd)
         }
 
         // see if it matches the global var. if it does, use the var instead...
-        if (GetUserVariableManager().Exists(_T("#wx")))
+        if (!VerifyMacro(_T("$(#wx)")).IsEmpty())
         {
             local gvar = ReplaceMacros(_T("$(#wx)"), true);
             if (gvar.Matches(dir_nomacro))
-                dir = gvar;
+                dir = _T("$(#wx)");
         }
         WxPath = dir;
     }
