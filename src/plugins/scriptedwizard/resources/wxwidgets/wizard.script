@@ -7,6 +7,8 @@
 // globals
 WxGVarDefault <- _T("#wx")
 WxPathDefault <- _T("$(") + WxGVarDefault + _T(")"); // _T("$(#wx)")
+Wx3xGVarDefault <- WxGVarDefault + _T("30");
+Wx3xPathDefault <- _T("$(") + Wx3xGVarDefault + _T(")");
 WizType <- wizProject;
 WxPath <- _T("");
 WantPCH <- false;
@@ -225,6 +227,12 @@ function OnLeave_WxPath(fwd)
         }
 
         // see if it matches the global var. if it does, use the var instead...
+        if (!VerifyMacro(Wx3xPathDefault).IsEmpty())
+        {
+            local gvar = ReplaceMacros(Wx3xPathDefault, true);
+            if (gvar.Matches(dir_nomacro))
+                dir = Wx3xPathDefault;
+        }
         if (!VerifyMacro(WxPathDefault).IsEmpty())
         {
             local gvar = ReplaceMacros(WxPathDefault, true);
