@@ -9,8 +9,15 @@ WxGVarDefault <- _T("#wx")
 WxPathDefault <- _T("$(") + WxGVarDefault + _T(")"); // _T("$(#wx)")
 Wx3xGVarDefault <- WxGVarDefault + _T("30");
 Wx3xPathDefault <- _T("$(") + Wx3xGVarDefault + _T(")");
+WxPathDefaultInc <- _T("$(") + WxGVarDefault + _T(".include)");
+WxPathDefaultLib <- _T("$(") + WxGVarDefault + _T(".lib)/");
+Wx3xPathDefaultInc <- _T("$(") + Wx3xGVarDefault + _T(".include)");
+Wx3xPathDefaultLib <- _T("$(") + Wx3xGVarDefault + _T(".lib)/");
 WizType <- wizProject;
 WxPath <- _T("");
+WxPathBase <- _T("");
+WxPathInc <- _T("");
+WxPathLib <- _T("");
 WantPCH <- false;
 IsDLL <- false;
 IsMonolithic <- false;
@@ -219,12 +226,10 @@ function OnLeave_WxPath(fwd)
     {
         local dir         = Wizard.GetTextControlValue(_T("txtFolder"));
         local dir_nomacro = ReplaceMacros(dir, true);
-        if (!IO.FileExists(dir_nomacro + _T("/include/wx/wx.h")))
-        {
-            ShowError(_T("The path you entered seems valid, but this wizard " +
-                    "can't locate wxWidgets' files in it..."));
+        local dir_copy    = dir;
+        
+        if (dir_nomacro.IsEmpty())
             return false;
-        }
 
         // see if it matches the global var. if it does, use the var instead...
         if (!VerifyMacro(Wx3xPathDefault).IsEmpty())
@@ -239,6 +244,35 @@ function OnLeave_WxPath(fwd)
             if (gvar.Matches(dir_nomacro))
                 dir = WxPathDefault;
         }
+
+        if (dir.Matches(WxPathDefault))
+        {
+            WxPathBase  = WxPathDefault;
+            WxPathInc   = WxPathDefaultInc;
+            WxPathLib   = WxPathDefaultLib;
+        } 
+        else if (dir.Matches(Wx3xPathDefault))
+        {
+            WxPathBase  = Wx3xPathDefault;
+            WxPathInc   = Wx3xPathDefaultInc;
+            WxPathLib   = Wx3xPathDefaultLib;
+        }
+        else
+        {
+            WxPathBase  = dir_copy; // Remember the original selection.
+            WxPathInc   = dir_copy + _T("/include")
+            WxPathLib   = dir_copy + _T("/lib/");
+        }
+
+        local dir_nomacro_inc;
+        dir_nomacro_inc = GetCompilerIncludeDir(dir_copy, WxPathBase, WxPathInc);
+        if (dir_nomacro_inc.IsEmpty())
+            return false;
+        if (!VerifyFile(dir_nomacro_inc + wxFILE_SEP_PATH + _T("wx"), 
+                        _T("wx.h"), _T("wxWidget's include"))
+        )
+            return false;
+
         WxPath = dir;
     }
     return true;
@@ -306,7 +340,7 @@ function OnLeave_WxConf(fwd)
         local lib_wxver;
         local lib_unic_suffix;
         local lib_suffix;
-        local lib = WxPath + _T("/lib/");
+        local lib = WxPathLib;
         if (GetCompilerFactory().CompilerInheritsFrom(Wizard.GetCompilerID(), _T("gcc*")))
         {
             lib = lib + _T("gcc_");
@@ -642,8 +676,8 @@ function SetupProject(project)
     }
     else
     {
-        project.AddIncludeDir(WxPath + _T("/include"));
-        project.AddResourceIncludeDir(WxPath + _T("/include"));
+        project.AddIncludeDir(WxPathInc);
+        project.AddResourceIncludeDir(WxPathInc);
         libdir = LibPath + _T("/msw");
         if (IsUnicode)
             libdir = libdir + _T("u");
