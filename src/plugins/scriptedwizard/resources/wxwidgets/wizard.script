@@ -5,6 +5,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 // globals
+WxGVarDefault <- _T("#wx")
+WxPathDefault <- _T("$(") + WxGVarDefault + _T(")"); // _T("$(#wx)")
 WizType <- wizProject;
 WxPath <- _T("");
 WantPCH <- false;
@@ -74,7 +76,7 @@ function BeginWizard()
         Wizard.AddPage(_T("WxProjDetails"));
         Wizard.AddPage(_T("WxGuiSelect"));
         if (PLATFORM == PLATFORM_MSW)
-            Wizard.AddGenericSelectPathPage(_T("WxPath"), wxpath_msg, _T("wxWidgets' location:"), _T("$(#wx)"));
+            Wizard.AddGenericSelectPathPage(_T("WxPath"), wxpath_msg, _T("wxWidgets' location:"), WxPathDefault);
         // we need the compiler selection before wx settings, because we 'll have
         // to validate the settings. To do this we must know the compiler beforehand...
         Wizard.AddCompilerPage(_T(""), _T("*"), true, true);
@@ -102,7 +104,7 @@ function BeginWizard()
         Wizard.AddInfoPage(_T("WxIntro"), intro_msg);
         Wizard.AddGenericSingleChoiceListPage(_T("wxVersionPage"), _T("Please select the wxWidgets version you want to use."), _T("wxWidgets 2.6.x;wxWidgets 2.8.x;wxWidgets 3.0.x"), WxVersion); // select wxwidgets version
         if (PLATFORM == PLATFORM_MSW)
-            Wizard.AddGenericSelectPathPage(_T("WxPath"), wxpath_msg, _T("wxWidgets' location:"), _T("$(#wx)"));
+            Wizard.AddGenericSelectPathPage(_T("WxPath"), wxpath_msg, _T("wxWidgets' location:"), WxPathDefault);
         // we need the compiler selection before wx settings, because we 'll have
         // to validate the settings. To do this we must know the compiler beforehand...
         Wizard.AddBuildTargetPage(_T(""), false, true, _T(""), _T("*"), true);
@@ -223,11 +225,11 @@ function OnLeave_WxPath(fwd)
         }
 
         // see if it matches the global var. if it does, use the var instead...
-        if (!VerifyMacro(_T("$(#wx)")).IsEmpty())
+        if (!VerifyMacro(WxPathDefault).IsEmpty())
         {
-            local gvar = ReplaceMacros(_T("$(#wx)"), true);
+            local gvar = ReplaceMacros(WxPathDefault, true);
             if (gvar.Matches(dir_nomacro))
-                dir = _T("$(#wx)");
+                dir = WxPathDefault;
         }
         WxPath = dir;
     }
