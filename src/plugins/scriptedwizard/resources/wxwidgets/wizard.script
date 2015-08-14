@@ -76,8 +76,12 @@ function BeginWizard()
 
         local wxpath_msg = _T("Please select the location of wxWidgets on your computer.\n" +
                                 "This is the top-level folder where wxWidgets was unpacked.\n" +
-                                "To help you, this folder must contain the subfolders\n" +
-                                "\"include\" and \"lib\".");
+                                "To help you, this folder must contain the subfolder \"include\".\n" +
+                                "And if it does not contain the subfolder \"lib\"; then, you must\n" +
+                                "use a global variable of \"" + WxGVarDefault + "\" or \"" + 
+                                Wx3xGVarDefault + "\" that has lib set\n" +
+                                "to the subfolder that holds the wxWidget's library file.\n"
+                           );
 
         Wizard.AddInfoPage(_T("WxIntro"), intro_msg);
         Wizard.AddGenericSingleChoiceListPage(_T("wxVersionPage"), _T("Please select the wxWidgets version you want to use."), _T("wxWidgets 2.6.x;wxWidgets 2.8.x;wxWidgets 3.0.x"), WxVersion); // select wxwidgets version
