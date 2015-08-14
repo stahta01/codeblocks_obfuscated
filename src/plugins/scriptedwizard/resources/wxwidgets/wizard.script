@@ -340,39 +340,46 @@ function OnLeave_WxConf(fwd)
         local lib_wxver;
         local lib_unic_suffix;
         local lib_suffix;
-        local lib = WxPathLib;
+        local lib_postfix;
+        local lib;
         if (GetCompilerFactory().CompilerInheritsFrom(Wizard.GetCompilerID(), _T("gcc*")))
         {
-            lib = lib + _T("gcc_");
+            lib_postfix = _T("gcc_");
             lib_prefix = _T("lib");
             lib_suffix = _T(".a");
         }
         else if (GetCompilerFactory().CompilerInheritsFrom(Wizard.GetCompilerID(), _T("msvc*")))
         {
-            lib = lib + _T("vc_");
+            lib_postfix = _T("vc_");
             lib_prefix = _T("");
             lib_suffix = _T(".lib");
         }
         else if (GetCompilerFactory().CompilerInheritsFrom(Wizard.GetCompilerID(), _T("bcc*")))
         {
-            lib = lib + _T("bcc_");
+            lib_postfix = _T("bcc_");
             lib_prefix = _T("");
             lib_suffix = _T(".lib");
         }
         else if (GetCompilerFactory().CompilerInheritsFrom(Wizard.GetCompilerID(), _T("ow")))
         {
-            lib = lib + _T("wat_");
+            lib_postfix = _T("wat_");
             lib_prefix = _T("");
             lib_suffix = _T(".lib");
         }
 
+        if (WxVersion == 0)
+            lib_wxver = _T("26");
+        else if (WxVersion == 1)
+            lib_wxver = _T("28");
+        else if (WxVersion == 2)
+            lib_wxver = _T("30");
 
         if (IsDLL)
-            lib = lib + _T("dll");
+            lib_postfix = lib_postfix + _T("dll");
         else
-            lib = lib + _T("lib");
+            lib_postfix = lib_postfix + _T("lib");
 
-        lib = lib + Configuration;
+        lib = WxPathLib + lib_postfix + Configuration;
 
         // at this point we have the full path to the link libraries
         LibPath = lib;
@@ -385,13 +392,6 @@ function OnLeave_WxConf(fwd)
             lib_unic_suffix = _T("u");
         else
             lib_unic_suffix = _T("");
-
-        if (WxVersion == 0)
-            lib_wxver = _T("26");
-        else if (WxVersion == 1)
-            lib_wxver = _T("28");
-        else if (WxVersion == 2)
-            lib_wxver = _T("30");
 
         // Now set the global variables
         LibPrefix = lib_prefix; // Prefix of lib name
