@@ -1451,5 +1451,13 @@ function SilentVerifyWxWinLibFile(dir, lib_wxver)
             || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxmsw")  + lib_wxver + _T("d.a"))
             || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxbase") + lib_wxver + _T("ud.a"))
             || IO.FileExists(dir + wxFILE_SEP_PATH + _T("libwxmsw")  + lib_wxver + _T("ud.a"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("wxbase") + lib_wxver + _T(".lib"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("wxmsw")  + lib_wxver + _T(".lib"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("wxbase") + lib_wxver + _T("u.lib"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("wxmsw")  + lib_wxver + _T("u.lib"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("wxbase") + lib_wxver + _T("d.lib"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("wxmsw")  + lib_wxver + _T("d.lib"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("wxbase") + lib_wxver + _T("ud.lib"))
+            || IO.FileExists(dir + wxFILE_SEP_PATH + _T("wxmsw")  + lib_wxver + _T("ud.lib"))
     );
 } // function SilentVerifyWxWinLibFile
